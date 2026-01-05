@@ -120,6 +120,42 @@ public sealed class TraidrScanner
             if (dir is null) continue;
             if (stop <= 0m) continue;
 
+            if (_opt.RequireTrendEma20OverEma200)
+            {
+                if (!ema20.HasValue || !ema200.HasValue) continue;
+                if (dir == BreakoutDirection.Long && ema20.Value <= ema200.Value) continue;
+                if (dir == BreakoutDirection.Short && ema20.Value >= ema200.Value) continue;
+            }
+
+            if (_opt.RequirePriceAboveEma20)
+            {
+                if (!ema20.HasValue) continue;
+                if (dir == BreakoutDirection.Long && elephant.Close < ema20.Value) continue;
+                if (dir == BreakoutDirection.Short && elephant.Close > ema20.Value) continue;
+            }
+
+            if (_opt.RequirePriceAboveEma200)
+            {
+                if (!ema200.HasValue) continue;
+                if (dir == BreakoutDirection.Long && elephant.Close < ema200.Value) continue;
+                if (dir == BreakoutDirection.Short && elephant.Close > ema200.Value) continue;
+            }
+
+            if (_opt.RequirePriceAboveVwap)
+            {
+                if (!vwap.HasValue) continue;
+                if (dir == BreakoutDirection.Long && elephant.Close < vwap.Value) continue;
+                if (dir == BreakoutDirection.Short && elephant.Close > vwap.Value) continue;
+            }
+
+            var range = elephant.High - elephant.Low;
+            if (range > 0m)
+            {
+                var closePos = (elephant.Close - elephant.Low) / range;
+                if (dir == BreakoutDirection.Long && closePos < _opt.MinCloseInRangeForLong) continue;
+                if (dir == BreakoutDirection.Short && closePos > _opt.MaxCloseInRangeForShort) continue;
+            }
+
             candidates.Add(new SetupCandidate(
                 Symbol: symbol,
                 Direction: dir.Value,

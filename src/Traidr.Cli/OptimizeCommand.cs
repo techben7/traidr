@@ -193,11 +193,17 @@ public sealed class OptimizeCommand
             // keep indicator filters fixed unless you explicitly want to search these
             RequireNearEma20 = opt.RequireNearEma20,
             MaxDistanceFromEma20Pct = opt.MaxDistanceFromEma20Pct,
+            RequirePriceAboveEma20 = opt.RequirePriceAboveEma20,
+            RequirePriceAboveEma200 = opt.RequirePriceAboveEma200,
+            RequireTrendEma20OverEma200 = opt.RequireTrendEma20OverEma200,
+            RequirePriceAboveVwap = opt.RequirePriceAboveVwap,
             RequireEma20NearEma200 = opt.RequireEma20NearEma200,
             MaxEmaDistancePct = opt.MaxEmaDistancePct,
             RequireAtrAvailable = opt.RequireAtrAvailable,
             MinAtrPct = opt.MinAtrPct,
-            MaxAtrPct = opt.MaxAtrPct
+            MaxAtrPct = opt.MaxAtrPct,
+            MinCloseInRangeForLong = opt.MinCloseInRangeForLong,
+            MaxCloseInRangeForShort = opt.MaxCloseInRangeForShort
         };
 
         var backtest = new TrialBacktestSettings
@@ -247,8 +253,10 @@ public sealed class OptimizeCommand
         // Composite (tunable): favor positive expectancy and consistency, penalize drawdown.
         // - AvgR is scaled to be "human readable"
         // - ProfitFactor tends to be noisy with few trades, so MinFilledTrades gate helps.
+        var winRateAdj = m.WinRate - opt.MinWinRate;
         var score = (m.AvgR * opt.WeightAvgR)
                     + (m.ProfitFactor * opt.WeightProfitFactor)
+                    + (winRateAdj * opt.WeightWinRate)
                     - (m.MaxDrawdownPct * opt.WeightMaxDrawdownPct);
 
         // small penalty for too many no-fills (wastes signals)
@@ -372,6 +380,8 @@ public sealed class OptimizeCommand
             WeightProfitFactor = _cfg.GetValue("Optimize:Weights:ProfitFactor", 10m),
             WeightMaxDrawdownPct = _cfg.GetValue("Optimize:Weights:MaxDrawdownPct", 50m),
             WeightNoFillPct = _cfg.GetValue("Optimize:Weights:NoFillPct", 5m),
+            WeightWinRate = _cfg.GetValue("Optimize:Weights:WinRate", 100m),
+            MinWinRate = _cfg.GetValue("Optimize:MinWinRate", 0.5m),
 
             TrainWeight = _cfg.GetValue("Optimize:TrainWeight", 0.6m),
             TestWeight = _cfg.GetValue("Optimize:TestWeight", 0.4m),
@@ -395,17 +405,24 @@ public sealed class OptimizeCommand
             FillBarsMax = _cfg.GetValue("Optimize:Ranges:FillBarsMax", 12),
             EntryBufferMin = _cfg.GetValue("Optimize:Ranges:EntryBufferMin", 0.0m),
             EntryBufferMax = _cfg.GetValue("Optimize:Ranges:EntryBufferMax", 0.0025m),
-            TpRValues = ParseTpValues(_cfg.GetValue<string>("Optimize:Ranges:TpRValues") ?? "null,1.0,1.5,2.0,2.5,3.0")
+            TpRValues = ParseTpValues(_cfg.GetValue<string>("Optimize:Ranges:TpRValues") ?? "1.5,2.0,2.5") // "null,1.0,1.5,2.0,2.5") // ,3.0")
         };
 
         // Keep indicator-based requirements as fixed knobs in config (not searched by default)
         p.RequireNearEma20 = _cfg.GetValue("Optimize:Fixed:RequireNearEma20", false);
         p.MaxDistanceFromEma20Pct = _cfg.GetValue("Optimize:Fixed:MaxDistanceFromEma20Pct", 0.010m);
+        p.RequirePriceAboveEma20 = _cfg.GetValue("Optimize:Fixed:RequirePriceAboveEma20", false);
+        p.RequirePriceAboveEma200 = _cfg.GetValue("Optimize:Fixed:RequirePriceAboveEma200", false);
+        p.RequireTrendEma20OverEma200 = _cfg.GetValue("Optimize:Fixed:RequireTrendEma20OverEma200", false);
+        p.RequirePriceAboveVwap = _cfg.GetValue("Optimize:Fixed:RequirePriceAboveVwap", false);
+
         p.RequireEma20NearEma200 = _cfg.GetValue("Optimize:Fixed:RequireEma20NearEma200", false);
         p.MaxEmaDistancePct = _cfg.GetValue("Optimize:Fixed:MaxEmaDistancePct", 0.010m);
         p.RequireAtrAvailable = _cfg.GetValue("Optimize:Fixed:RequireAtrAvailable", true);
         p.MinAtrPct = _cfg.GetValue("Optimize:Fixed:MinAtrPct", 0.001m);
         p.MaxAtrPct = _cfg.GetValue("Optimize:Fixed:MaxAtrPct", 0.030m);
+        p.MinCloseInRangeForLong = _cfg.GetValue("Optimize:Fixed:MinCloseInRangeForLong", 0.0m);
+        p.MaxCloseInRangeForShort = _cfg.GetValue("Optimize:Fixed:MaxCloseInRangeForShort", 1.0m);
 
         return p;
 
@@ -452,6 +469,8 @@ public sealed record OptimizeOptions
     public decimal WeightProfitFactor { get; init; } = 10m;
     public decimal WeightMaxDrawdownPct { get; init; } = 50m;
     public decimal WeightNoFillPct { get; init; } = 5m;
+    public decimal WeightWinRate { get; init; } = 100m;
+    public decimal MinWinRate { get; init; } = 0.5m;
     public decimal TrainWeight { get; init; } = 0.6m;
     public decimal TestWeight { get; init; } = 0.4m;
 
@@ -479,11 +498,17 @@ public sealed record OptimizeOptions
     // Fixed indicator requirements (not searched by default)
     public bool RequireNearEma20 { get; set; }
     public decimal MaxDistanceFromEma20Pct { get; set; }
+    public bool RequirePriceAboveEma20 { get; set; }
+    public bool RequirePriceAboveEma200 { get; set; }
+    public bool RequireTrendEma20OverEma200 { get; set; }
+    public bool RequirePriceAboveVwap { get; set; }
     public bool RequireEma20NearEma200 { get; set; }
     public decimal MaxEmaDistancePct { get; set; }
     public bool RequireAtrAvailable { get; set; }
     public decimal MinAtrPct { get; set; }
     public decimal MaxAtrPct { get; set; }
+    public decimal MinCloseInRangeForLong { get; set; }
+    public decimal MaxCloseInRangeForShort { get; set; }
 
 }
 

@@ -9,9 +9,99 @@ dotnet run --project src/Traidr.Cli -- backtest \
 
 --------------
 
-dotnet run --project src/Traidr.Cli -- optimize \
-  --symbols SOXL,QBTS,TSLL,SIDU \
-  --trainFrom 2025-01-01 --trainTo 2025-03-01 \
-  --testFrom 2025-04-01 --testTo 2025-06-01 \
-  --trials 50 \
+
+dotnet run --project src/Traidr.Cli -- optimize \                                    ✔  4m 57s   16.20.2  
+  --symbols GOOG,NVDA,F,SOXL \
+  --trainFrom 2025-01-01 --trainTo 2025-06-01 \
+  --testFrom 2025-06-02 --testTo 2025-10-30 \
+  --trials 500 \
   --out out_opt
+
+      WINNER 1:
+        "Scanner": {
+          "ConsolidationLookbackBars": 22,
+          "MaxConsolidationRangePct": 0.003821063353131087,
+          "MinBodyToMedianBody": 2.9741994661158872,
+          "MinVolumeToAvgVolume": 4.2023417827218505,
+          "BreakoutBufferPct": 0.001907181106464556,
+          "RequireNearEma20": false,
+          "MaxDistanceFromEma20Pct": 0.010,
+          "RequireEma20NearEma200": false,
+          "MaxEmaDistancePct": 0.010,
+          "RequireAtrAvailable": true,
+          "MinAtrPct": 0.001,
+          "MaxAtrPct": 0.030,
+          "StopBufferPct": 0.000912211664445796
+        },
+        "Execution": {
+          "Mode": "Paper",
+          "Timeframe": "5Min",
+          "LookbackMinutes": 120,
+          "RunLoop": false,
+          "LoopDelaySeconds": 60
+        },
+
+            TEST A - GOOD:
+              dotnet run --project src/Traidr.Cli -- backtest \
+              --symbols GOOG,NVDA,F,SOXL \
+              --from 2025-06-01 \
+              --to 2025-11-01
+
+            TEST B - GOOD:
+              dotnet run --project src/Traidr.Cli -- backtest \                                 
+              --symbols GOOG,NVDA,F,SOXL \
+              --from 2025-08-01 \
+              --to 2026-01-03
+
+            TEST C - BAD:
+              dotnet run --project src/Traidr.Cli -- backtest \
+              --symbols NVDA,INTC,PLTR,MU,AAPL,WMT,GILD,JBL,WDC,TEAM,PEP,ABNB,TTMI,LYFT,NKE,DKNG,ONON,IBP,DHI,SOLV \
+              --from 2025-08-01 \
+              --to 2026-01-03
+
+            TEST D - NADA:
+              dotnet run --project src/Traidr.Cli -- backtest \
+              --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+              --from 2025-08-01 \
+              --to 2026-01-03
+
+  ----------------------
+
+dotnet run --project src/Traidr.Cli -- optimize \
+  --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --trainFrom 2025-01-01 --trainTo 2025-06-01 \
+  --testFrom 2025-06-02 --testTo 2025-10-30 \
+  --trials 500 \
+  --out out_opt
+
+
+
+--------
+
+  AAPL,MSFT,NVDA,AMD,AMZN,META,TSLA,GOOGL,NFLX,AVGO,JPM,BAC,XLF,XLE,XLI,QQQ,SPY,IWM,SMH,TQQQ,SOXL
+
+  "AAPL","MSFT","NVDA","AMD","AMZN","META","TSLA","GOOGL","NFLX","AVGO","JPM","BAC","XLF","XLE","XLI","QQQ","SPY","IWM","SMH","TQQQ","SOXL"
+
+  SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY
+
+  "SOFI","RIVN","PLTR","DKNG","AFRM","MARA","RIOT","LCID","U","PENN","HOOD","OPEN","CLOV","RKLB","PATH","RUN","BROS","IONQ","WOLF","TLRY"
+
+-------
+
+dotnet run --project src/Traidr.Cli -- optimize \
+  --symbols IREN,CIFR,NBIS,BMNR,HOOD,COIN,GOOGL,JOBY,NVDA \
+  --trainFrom 2025-06-01 --trainTo 2025-09-30 \
+  --testFrom 2025-10-01 --testTo 2026-01-03 \
+  --trials 300 --top 20
+
+TravelingTrader 1/4/2026
+
+  DayTrade:
+    btc 94+, crwv
+    IREN,CIFR,NBIS,BMNR,HOOD,COIN,GOOGL,JOBY, NVDA
+
+
+  LongHold:
+    UBER,NFLX,META,COST,MSFT,NVO
+
+------  

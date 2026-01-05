@@ -1,0 +1,124 @@
+
+dotnet run --project src/Traidr.Cli -- optimize \
+  --symbols IREN,CIFR,NBIS,BMNR,HOOD,COIN,GOOGL,JOBY,SOXL,TSLL,QBTS,SIDU \
+  --trainFrom 2025-04-01 --trainTo 2025-07-30 \
+  --testFrom 2025-08-01 --testTo 2026-01-03 \
+  --trials 500 --top 15
+
+
+
+------------
+
+
+{
+    "TrialIndex": 180,
+    "Scanner": {
+      "ConsolidationLookbackBars": 24,
+      "MaxConsolidationRangePct": 0.0076386555869312210,
+      "MinBodyToMedianBody": 1.33120630575865812,
+      "MinVolumeToAvgVolume": 1.6193909613971552,
+      "BreakoutBufferPct": 0.000897633023978040,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.000459577718963650
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 5,
+      "EntryLimitBufferPct": 0.00009244494819661830,
+      "TakeProfitR": 0.75
+    },
+    "Train": {
+      "Trades": 20,
+      "FilledTrades": 20,
+      "Wins": 12,
+      "Losses": 8,
+      "WinRate": 0.6,
+      "TotalPnl": -48.41663423574532356454420325,
+      "AvgPnl": -2.4208317117872661782272101625,
+      "AvgR": -0.0418817335756967512472099899,
+      "MaxDrawdown": 248.46027841340080146310942725,
+      "MaxDrawdownPct": 0.0099384111365360320585243771,
+      "ProfitFactor": 0.8775299158175945170461487945
+    },
+    "Test": {
+      "Trades": 29,
+      "FilledTrades": 29,
+      "Wins": 17,
+      "Losses": 12,
+      "WinRate": 0.5862068965517241379310344828,
+      "TotalPnl": 236.85427395580112242219264225,
+      "AvgPnl": 8.167388757096590428351470422,
+      "AvgR": 0.1033965191561810421186897242,
+      "MaxDrawdown": 171.47740553557821213777234050,
+      "MaxDrawdownPct": 0.0068590962214231284855108936,
+      "ProfitFactor": 1.6938896459009742301382874397
+    },
+    "TrainScore": 14.090205243779468442814270100,
+    "TestScore": 35.556283218729103882079750417,
+    "FinalScore": 22.676636433759322618520462227
+  },
+
+
+  ------------
+
+  TEST 1 - NADA:
+    dotnet run --project src/Traidr.Cli -- backtest \
+    --symbols IREN,CIFR,NBIS,BMNR,HOOD,COIN,GOOGL,JOBY,SOXL,TSLL,QBTS,SIDU \
+    --from 2025-01-01 \
+    --to 2025-04-01
+
+  TEST 2 - NADA:
+    dotnet run --project src/Traidr.Cli -- backtest \
+    --symbols IREN,CIFR,NBIS,BMNR,HOOD,COIN,GOOGL,JOBY,SOXL,TSLL,QBTS,SIDU \
+    --from 2025-04-01 \
+    --to 2025-08-01
+
+  TEST 3 - GOOD - small:
+    dotnet run --project src/Traidr.Cli -- backtest \
+    --symbols IREN,CIFR,NBIS,BMNR,HOOD,COIN,GOOGL,JOBY,SOXL,TSLL,QBTS,SIDU \
+    --from 2025-08-01 \
+    --to 2025-12-31
+
+  TEST 4 - NADA:
+    dotnet run --project src/Traidr.Cli -- backtest \
+    --symbols IREN,CIFR,NBIS,BMNR,HOOD,COIN,GOOGL,JOBY,SOXL,TSLL,QBTS,SIDU \
+    --from 2025-12-31 \
+    --to 2026-01-04
+
+    ----
+
+  TEST 10 - NADA:
+    dotnet run --project src/Traidr.Cli -- backtest \
+    --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+    --from 2025-01-01 \
+    --to 2025-04-01
+
+  TEST 11 - GOOD! :
+    dotnet run --project src/Traidr.Cli -- backtest \
+    --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+    --from 2025-04-01 \
+    --to 2025-08-01
+
+  TEST 12 - NADA:
+    dotnet run --project src/Traidr.Cli -- backtest \
+    --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+    --from 2025-08-01 \
+    --to 2025-12-31
+
+  TEST 13 - NADA:
+    dotnet run --project src/Traidr.Cli -- backtest \
+    --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+    --from 2025-12-31 \
+    --to 2026-01-04
+

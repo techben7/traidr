@@ -52,27 +52,36 @@ public sealed class AlpacaMarketDataClient : IMarketDataClient
         resp.EnsureSuccessStatusCode();
 
         var raw = await resp.Content.ReadAsStringAsync(ct);
-        var dto = JsonSerializer.Deserialize<AlpacaSnapshotsResponse>(raw, Json)
-                  ?? throw new InvalidOperationException("Failed to parse snapshots response.");
+        // var dto = JsonSerializer.Deserialize<AlpacaSnapshotsResponse>(raw, Json)
+        //           ?? throw new InvalidOperationException("Failed to parse snapshots response.");
+
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        var snapshots = JsonSerializer.Deserialize<Dictionary<string, AlpacaStockSnapshotDto>>(raw, options);
 
         var dict = new Dictionary<string, Snapshot>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (symbol, s) in dto.Snapshots)
+
+        // foreach (var (symbol, s) in dto.Snapshots)
+        foreach (var (symbol, s) in snapshots)
         {
             Quote? q = null;
             if (s.LatestQuote is not null)
             {
-                q = new Quote(symbol, s.LatestQuote.Bp, s.LatestQuote.Ap, s.LatestQuote.Bs, s.LatestQuote.As);
+                q = new Quote(symbol, s.LatestQuote.BidPrice, s.LatestQuote.AskPrice, s.LatestQuote.BidSize, s.LatestQuote.AskSize);
             }
 
             DailyBar? d = null;
             if (s.DailyBar is not null)
             {
-                d = new DailyBar(s.DailyBar.O, s.DailyBar.H, s.DailyBar.L, s.DailyBar.C, s.DailyBar.V);
+                d = new DailyBar(s.DailyBar.OpenPrice, s.DailyBar.HighPrice, s.DailyBar.LowPrice, s.DailyBar.ClosePrice, s.DailyBar.Volume);
             }
 
             dict[symbol] = new Snapshot(
                 Symbol: symbol,
-                LatestTradePrice: s.LatestTrade?.P,
+                LatestTradePrice: s.LatestTrade?.Price,
                 LatestQuote: q,
                 DailyBar: d
             );
@@ -135,12 +144,12 @@ public sealed class AlpacaMarketDataClient : IMarketDataClient
                 {
                     bars.Add(new Bar(
                         Symbol: symbol,
-                        TimeUtc: b.T,
-                        Open: b.O,
-                        High: b.H,
-                        Low: b.L,
-                        Close: b.C,
-                        Volume: b.V
+                        TimeUtc: b.TimestampUtc,
+                        Open: b.OpenPrice,
+                        High: b.HighPrice,
+                        Low: b.LowPrice,
+                        Close: b.ClosePrice,
+                        Volume: b.Volume
                     ));
                 }
             }
@@ -167,63 +176,176 @@ public sealed class AlpacaMarketDataClient : IMarketDataClient
 
         // Alpaca has (beta) movers/screener endpoints in some plans.
         // If this endpoint is unavailable for your plan, it will throw; set EnableTopGainers=false.
-        var url = $"/v1beta1/screener/stocks/movers?top={top}&direction=up";
+        var url = $"/v1beta1/screener/stocks/movers?top={top}"; // &direction=up
 
         var resp = await _http.GetAsync(url, ct);
         if (!resp.IsSuccessStatusCode)
             return Array.Empty<string>();
 
         var raw = await resp.Content.ReadAsStringAsync(ct);
-        var dto = JsonSerializer.Deserialize<AlpacaMoversResponse>(raw, Json);
-        return dto?.Movers?.Select(m => m.Symbol).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+        var dto = JsonSerializer.Deserialize<AlpacaGainersResponse>(raw, Json);
+
+        return dto?.Gainers?.Select(m => m.Symbol).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
                ?? Array.Empty<string>();
     }
 
     // ---- DTOs ----
-    private sealed class AlpacaSnapshotsResponse
-    {
-        [JsonPropertyName("snapshots")]
-        public Dictionary<string, AlpacaSnapshotDto> Snapshots { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    }
 
-    private sealed class AlpacaSnapshotDto
+    public class AlpacaStockSnapshotDto
     {
-        [JsonPropertyName("latestTrade")]
-        public AlpacaTradeDto? LatestTrade { get; set; }
+        [JsonPropertyName("dailyBar")]
+        public AlpacaBarDto DailyBar { get; set; }
 
         [JsonPropertyName("latestQuote")]
-        public AlpacaQuoteDto? LatestQuote { get; set; }
+        public AlpacaQuoteDto LatestQuote { get; set; }
 
-        [JsonPropertyName("dailyBar")]
-        public AlpacaDailyBarDto? DailyBar { get; set; }
+        [JsonPropertyName("latestTrade")]
+        public AlpacaTradeDto LatestTrade { get; set; }
+
+        [JsonPropertyName("minuteBar")]
+        public AlpacaBarDto MinuteBar { get; set; }
+
+        [JsonPropertyName("prevDailyBar")]
+        public AlpacaBarDto PreviousDailyBar { get; set; }
     }
 
-    private sealed class AlpacaTradeDto
+    public class AlpacaBarDto
     {
-        [JsonPropertyName("p")]
-        public decimal P { get; set; }
+        [JsonPropertyName("o")]
+        public decimal OpenPrice { get; set; }
+
+        [JsonPropertyName("h")]
+        public decimal HighPrice { get; set; }
+
+        [JsonPropertyName("l")]
+        public decimal LowPrice { get; set; }
+
+        [JsonPropertyName("c")]
+        public decimal ClosePrice { get; set; }
+
+        [JsonPropertyName("v")]
+        public long Volume { get; set; }
+
+        [JsonPropertyName("n")]
+        public int TradeCount { get; set; }
+
+        [JsonPropertyName("vw")]
+        public decimal VolumeWeightedAveragePrice { get; set; }
+
+        [JsonPropertyName("t")]
+        public DateTime TimestampUtc { get; set; }
     }
 
-    private sealed class AlpacaQuoteDto
+    public class AlpacaQuoteDto
     {
         [JsonPropertyName("bp")]
-        public decimal Bp { get; set; }
-        [JsonPropertyName("ap")]
-        public decimal Ap { get; set; }
+        public decimal BidPrice { get; set; }
+
         [JsonPropertyName("bs")]
-        public long? Bs { get; set; }
+        public int BidSize { get; set; }
+
+        [JsonPropertyName("bx")]
+        public string BidExchange { get; set; }
+
+        [JsonPropertyName("ap")]
+        public decimal AskPrice { get; set; }
+
         [JsonPropertyName("as")]
-        public long? As { get; set; }
+        public int AskSize { get; set; }
+
+        [JsonPropertyName("ax")]
+        public string AskExchange { get; set; }
+
+        [JsonPropertyName("c")]
+        public List<string> Conditions { get; set; }
+
+        [JsonPropertyName("t")]
+        public DateTime TimestampUtc { get; set; }
+
+        [JsonPropertyName("z")]
+        public string Tape { get; set; }
     }
 
-    private sealed class AlpacaDailyBarDto
+    public class AlpacaTradeDto
     {
-        [JsonPropertyName("o")] public decimal O { get; set; }
-        [JsonPropertyName("h")] public decimal H { get; set; }
-        [JsonPropertyName("l")] public decimal L { get; set; }
-        [JsonPropertyName("c")] public decimal C { get; set; }
-        [JsonPropertyName("v")] public long V { get; set; }
+        [JsonPropertyName("p")]
+        public decimal Price { get; set; }
+
+        [JsonPropertyName("s")]
+        public int Size { get; set; }
+
+        [JsonPropertyName("i")]
+        public long TradeId { get; set; }
+
+        [JsonPropertyName("x")]
+        public string Exchange { get; set; }
+
+        [JsonPropertyName("z")]
+        public string Tape { get; set; }
+
+        [JsonPropertyName("c")]
+        public List<string> Conditions { get; set; }
+
+        [JsonPropertyName("t")]
+        public DateTime TimestampUtc { get; set; }
     }
+
+
+
+
+
+
+    // private sealed class AlpacaSnapshotsResponse
+    // {
+    //     // [JsonPropertyName("snapshots")]
+    //     public Dictionary<string, AlpacaSnapshotDto> Snapshots { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    //     // Dictionary<string, AlpacaSnapshotDto>
+    // }
+
+    // private sealed class AlpacaSnapshotDto
+    // {
+    //     [JsonPropertyName("latestTrade")]
+    //     public AlpacaTradeDto? LatestTrade { get; set; }
+
+    //     [JsonPropertyName("latestQuote")]
+    //     public AlpacaQuoteDto? LatestQuote { get; set; }
+
+    //     [JsonPropertyName("dailyBar")]
+    //     public AlpacaDailyBarDto? DailyBar { get; set; }
+
+    //     // public DailyBarDto DailyBar { get; set; }
+    //     // public LatestQuoteDto LatestQuote { get; set; }
+    //     // public LatestTradeDto LatestTrade { get; set; }
+    //     // public MinuteBarDto MinuteBar { get; set; }
+    //     // public DailyBarDto PrevDailyBar { get; set; }
+    // }
+
+    // private sealed class AlpacaTradeDto
+    // {
+    //     [JsonPropertyName("p")]
+    //     public decimal P { get; set; }
+    // }
+
+    // private sealed class AlpacaQuoteDto
+    // {
+    //     [JsonPropertyName("bp")]
+    //     public decimal Bp { get; set; }
+    //     [JsonPropertyName("ap")]
+    //     public decimal Ap { get; set; }
+    //     [JsonPropertyName("bs")]
+    //     public long? Bs { get; set; }
+    //     [JsonPropertyName("as")]
+    //     public long? As { get; set; }
+    // }
+
+    // private sealed class AlpacaDailyBarDto
+    // {
+    //     [JsonPropertyName("o")] public decimal O { get; set; }
+    //     [JsonPropertyName("h")] public decimal H { get; set; }
+    //     [JsonPropertyName("l")] public decimal L { get; set; }
+    //     [JsonPropertyName("c")] public decimal C { get; set; }
+    //     [JsonPropertyName("v")] public long V { get; set; }
+    // }
 
     private sealed class AlpacaBarsResponse
     {
@@ -234,25 +356,31 @@ public sealed class AlpacaMarketDataClient : IMarketDataClient
         public string? NextPageToken { get; set; }
     }
 
-    private sealed class AlpacaBarDto
+    // private sealed class AlpacaBarDto
+    // {
+    //     [JsonPropertyName("t")] public DateTime T { get; set; }
+    //     [JsonPropertyName("o")] public decimal O { get; set; }
+    //     [JsonPropertyName("h")] public decimal H { get; set; }
+    //     [JsonPropertyName("l")] public decimal L { get; set; }
+    //     [JsonPropertyName("c")] public decimal C { get; set; }
+    //     [JsonPropertyName("v")] public long V { get; set; }
+    // }
+
+    private sealed class AlpacaGainersResponse
     {
-        [JsonPropertyName("t")] public DateTime T { get; set; }
-        [JsonPropertyName("o")] public decimal O { get; set; }
-        [JsonPropertyName("h")] public decimal H { get; set; }
-        [JsonPropertyName("l")] public decimal L { get; set; }
-        [JsonPropertyName("c")] public decimal C { get; set; }
-        [JsonPropertyName("v")] public long V { get; set; }
+        [JsonPropertyName("gainers")]
+        public List<AlpacaGainerDto>? Gainers { get; set; }
     }
 
-    private sealed class AlpacaMoversResponse
-    {
-        [JsonPropertyName("movers")]
-        public List<AlpacaMoverDto>? Movers { get; set; }
-    }
-
-    private sealed class AlpacaMoverDto
+    private sealed class AlpacaGainerDto
     {
         [JsonPropertyName("symbol")]
         public string Symbol { get; set; } = "";
+        [JsonPropertyName("change")]
+        public decimal Change { get; set; } = 0;
+        [JsonPropertyName("percent_change")]
+        public decimal PercentChange { get; set; } = 0;
+        [JsonPropertyName("price")]
+        public decimal Price { get; set; } = 0;
     }
 }

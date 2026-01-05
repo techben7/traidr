@@ -1,0 +1,26 @@
+{
+  "Symbols": [
+    "IREN",
+    "CIFR",
+    "NBIS",
+    "BMNR",
+    "HOOD",
+    "COIN",
+    "GOOGL",
+    "JOBY",
+    "SOXL",
+    "TSLL",
+    "QBTS",
+    "SIDU"
+  ],
+  "FromDateEt": "2025-04-01",
+  "ToDateEt": "2025-08-01",
+  "Timeframe": "5Min",
+  "MaxBarsToFillEntry": 6,
+  "EntryLimitBufferPct": 0,
+  "FlattenTimeEt": "15:50:00",
+  "SameBarRule": 0,
+  "SlippagePct": 0.0005,
+  "CommissionPerTrade": 0,
+  "TakeProfitR": null
+}

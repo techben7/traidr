@@ -17,6 +17,11 @@ public sealed record TraidrScannerOptions
     public bool RequireNearEma20 { get; init; } = false;
     public decimal MaxDistanceFromEma20Pct { get; init; } = 0.010m; // 1%
 
+    public bool RequirePriceAboveEma20 { get; init; } = false;
+    public bool RequirePriceAboveEma200 { get; init; } = false;
+    public bool RequireTrendEma20OverEma200 { get; init; } = false;
+    public bool RequirePriceAboveVwap { get; init; } = false;
+
     public bool RequireEma20NearEma200 { get; init; } = false;
     public decimal MaxEmaDistancePct { get; init; } = 0.010m; // 1%
 
@@ -24,6 +29,10 @@ public sealed record TraidrScannerOptions
     public bool RequireAtrAvailable { get; init; } = true;
     public decimal MinAtrPct { get; init; } = 0.001m;
     public decimal MaxAtrPct { get; init; } = 0.030m;
+
+    // elephant bar close position (0..1), higher = closer to high
+    public decimal MinCloseInRangeForLong { get; init; } = 0.0m;
+    public decimal MaxCloseInRangeForShort { get; init; } = 1.0m;
 
     // Stop placement
     public decimal StopBufferPct { get; init; } = 0.000m; // e.g., 0.001 adds 0.1% beyond consolidation boundary

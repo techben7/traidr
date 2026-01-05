@@ -1,0 +1,184 @@
+dotnet run --project src/Traidr.Cli -- optimize \
+  --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --trainFrom 2025-01-01 --trainTo 2025-06-01 \
+  --testFrom 2025-06-02 --testTo 2025-10-30 \
+  --trials 500 \
+  --out out_opt
+
+
+"TrialIndex": 310,
+    "Scanner": {
+      "ConsolidationLookbackBars": 29,
+      "MaxConsolidationRangePct": 0.004960401454456342,
+      "MinBodyToMedianBody": 2.6767593955047246,
+      "MinVolumeToAvgVolume": 4.246438172760625,
+      "BreakoutBufferPct": 0.00182327804706212,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.010,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.010,
+      "RequireAtrAvailable": true,
+      "MinAtrPct": 0.001,
+      "MaxAtrPct": 0.030,
+      "StopBufferPct": 0.0001079176590349142
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 4,
+      "EntryLimitBufferPct": 0.0011849863425292950,
+      "TakeProfitR": 2.5
+    },
+    "Train": {
+      "Trades": 1,
+      "FilledTrades": 1,
+      "Wins": 1,
+      "Losses": 0,
+      "WinRate": 1,
+      "TotalPnl": 15.6338378432343031991248000,
+      "AvgPnl": 15.6338378432343031991248000,
+      "AvgR": 0.1814124575192222730435110022,
+      "MaxDrawdown": 0,
+      "MaxDrawdownPct": 0,
+      "ProfitFactor": 999
+    },
+    "Test": {
+      "Trades": 1,
+      "FilledTrades": 1,
+      "Wins": 1,
+      "Losses": 0,
+      "WinRate": 1,
+      "TotalPnl": 151.08408250786919266405755375,
+      "AvgPnl": 151.08408250786919266405755375,
+      "AvgR": 1.7560322025510762127963315555,
+      "MaxDrawdown": 0,
+      "MaxDrawdownPct": 0,
+      "ProfitFactor": 999
+    },
+    "TrainScore": 10008.141245751922227304351100,
+    "TestScore": 10165.603220255107621279633156,
+    "FinalScore": 9071.126035553196384894463922
+  },
+
+    TEST 1 - GOOD
+      dotnet run --project src/Traidr.Cli -- backtest \
+                --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+                --from 2025-01-01 \
+                --to 2025-06-01
+
+    TEST 2 -
+      dotnet run --project src/Traidr.Cli -- backtest \
+                --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+                --from 2025-06-01 \
+                --to 2026-01-03
+
+  ------
+
+
+{
+    "TrialIndex": 410,
+    "Scanner": {
+      "ConsolidationLookbackBars": 7,
+      "MaxConsolidationRangePct": 0.0022298549228486862,
+      "MinBodyToMedianBody": 3.0982826903920082,
+      "MinVolumeToAvgVolume": 4.8831347897104625,
+      "BreakoutBufferPct": 0.001247995480544864,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.010,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.010,
+      "RequireAtrAvailable": true,
+      "MinAtrPct": 0.001,
+      "MaxAtrPct": 0.030,
+      "StopBufferPct": 0.000715011452657642
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 4,
+      "EntryLimitBufferPct": 0.0010493621793805450,
+      "TakeProfitR": 2.0
+    },
+    "Train": {
+      "Trades": 3,
+      "FilledTrades": 2,
+      "Wins": 2,
+      "Losses": 0,
+      "WinRate": 1,
+      "TotalPnl": 97.31401695571613445532165500,
+      "AvgPnl": 48.65700847785806722766082750,
+      "AvgR": 0.7150671963532643019560256461,
+      "MaxDrawdown": 0,
+      "MaxDrawdownPct": 0,
+      "ProfitFactor": 999
+    },
+    "Test": {
+      "Trades": 3,
+      "FilledTrades": 3,
+      "Wins": 1,
+      "Losses": 2,
+      "WinRate": 0.3333333333333333333333333333,
+      "TotalPnl": -63.94423846277538415357406000,
+      "AvgPnl": -21.314746154258461384524686667,
+      "AvgR": -0.3997493267002036141418308849,
+      "MaxDrawdown": 87.61841044548764153590344750,
+      "MaxDrawdownPct": 0.0035047364178195056614361379,
+      "ProfitFactor": 0.2701963190423466536367397992
+    },
+    "TrainScore": 10059.840052968659763528935898,
+    "TestScore": -37.448206300487870160887497393,
+    "FinalScore": 5020.9247492610007100530065398
+  },
+
+
+
+  -------
+
+  {
+    "TrialIndex": 47,
+    "Scanner": {
+      "ConsolidationLookbackBars": 10,
+      "MaxConsolidationRangePct": 0.0021622720966871238,
+      "MinBodyToMedianBody": 3.3806039457119098,
+      "MinVolumeToAvgVolume": 3.8134932384423405,
+      "BreakoutBufferPct": 0.000429350616610306,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.010,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.010,
+      "RequireAtrAvailable": true,
+      "MinAtrPct": 0.001,
+      "MaxAtrPct": 0.030,
+      "StopBufferPct": 0.001333813073734666
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 11,
+      "EntryLimitBufferPct": 0.0007918639542962725,
+      "TakeProfitR": 2.5
+    },
+    "Train": {
+      "Trades": 0,
+      "FilledTrades": 0,
+      "Wins": 0,
+      "Losses": 0,
+      "WinRate": 0,
+      "TotalPnl": 0,
+      "AvgPnl": 0,
+      "AvgR": 0,
+      "MaxDrawdown": 0,
+      "MaxDrawdownPct": 0,
+      "ProfitFactor": 0
+    },
+    "Test": {
+      "Trades": 2,
+      "FilledTrades": 2,
+      "Wins": 2,
+      "Losses": 0,
+      "WinRate": 1,
+      "TotalPnl": 184.09618742681727466871730000,
+      "AvgPnl": 92.04809371340863733435865000,
+      "AvgR": 1.2010228531051960849677863767,
+      "MaxDrawdown": 0,
+      "MaxDrawdownPct": 0,
+      "ProfitFactor": 999
+    },
+    "TrainScore": 0,
+    "TestScore": 10110.102285310519608496778638,
+    "FinalScore": 3044.0409141242078433987114552
+  }

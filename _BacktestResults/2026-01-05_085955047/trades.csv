@@ -1,0 +1,2 @@
+symbol,direction,qty,signalTimeUtc,entryTimeUtc,exitTimeUtc,entryLimit,filledEntry,stop,tp,exitPrice,outcome,pnl,r
+GOOGL,Long,59,2025-03-21T19:50:00.0000000Z,,,163.755,,162.58245258864092295108,,,NoFill,0,0

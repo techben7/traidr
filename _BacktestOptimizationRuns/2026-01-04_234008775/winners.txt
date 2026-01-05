@@ -1,0 +1,256 @@
+
+dotnet run --project src/Traidr.Cli -- optimize \
+  --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --trainFrom 2025-06-01 --trainTo 2025-11-30 \
+  --testFrom 2025-12-01 --testTo 2026-01-03 \
+  --trials 300 --top 20
+
+
+{
+    "TrialIndex": 2,
+    "Scanner": {
+      "ConsolidationLookbackBars": 14,
+      "MaxConsolidationRangePct": 0.0053752007239382790,
+      "MinBodyToMedianBody": 1.8968527978737150,
+      "MinVolumeToAvgVolume": 1.6183534762441904,
+      "BreakoutBufferPct": 0.00002081088489890610,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.0001348336022975080
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 15,
+      "EntryLimitBufferPct": 0.0002926366018562745,
+      "TakeProfitR": 2.0
+    },
+    "Train": {
+      "Trades": 130,
+      "FilledTrades": 97,
+      "Wins": 41,
+      "Losses": 56,
+      "WinRate": 0.422680412371134020618556701,
+      "TotalPnl": -19.04821030893433132728994500,
+      "AvgPnl": -0.1963733021539621786318551031,
+      "AvgR": -0.0114900339204720786020698143,
+      "MaxDrawdown": 989.8216326656366539390233062,
+      "MaxDrawdownPct": 0.0395928653066254661575609322,
+      "ProfitFactor": 0.991471342745455271636088237
+    },
+    "Test": {
+      "Trades": 42,
+      "FilledTrades": 23,
+      "Wins": 12,
+      "Losses": 11,
+      "WinRate": 0.5217391304347826086956521739,
+      "TotalPnl": 185.00734327519916394461729750,
+      "AvgPnl": 8.043797533704311475852925978,
+      "AvgR": 0.0961921334234732044872189091,
+      "MaxDrawdown": 326.05122190735660325830673625,
+      "MaxDrawdownPct": 0.0130420488762942641303322694,
+      "ProfitFactor": 1.3722376300132253843249267464
+    },
+    "TrainScore": -2.2151227620412956206377063390,
+    "TestScore": 22.601495480238360050257857532,
+    "FinalScore": 7.7115245348705666477205192096
+  },
+
+
+-------
+
+{
+    "TrialIndex": 269,
+    "Scanner": {
+      "ConsolidationLookbackBars": 22,
+      "MaxConsolidationRangePct": 0.0155317570672052670,
+      "MinBodyToMedianBody": 2.1954515145139074,
+      "MinVolumeToAvgVolume": 1.3718713221474872,
+      "BreakoutBufferPct": 0.000901246526232570,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.0004543211248024930
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 19,
+      "EntryLimitBufferPct": 0.00005178251632106610,
+      "TakeProfitR": 2.0
+    },
+    "Train": {
+      "Trades": 326,
+      "FilledTrades": 195,
+      "Wins": 80,
+      "Losses": 115,
+      "WinRate": 0.4102564102564102564102564103,
+      "TotalPnl": -892.8657702931210620139586616,
+      "AvgPnl": -4.5787988220160054462254290338,
+      "AvgR": -0.0609892629430643642600559763,
+      "MaxDrawdown": 1434.5715698488077027887837774,
+      "MaxDrawdownPct": 0.0573828627939523081115513511,
+      "ProfitFactor": 0.7992866266309298847543646207
+    },
+    "Test": {
+      "Trades": 61,
+      "FilledTrades": 60,
+      "Wins": 29,
+      "Losses": 31,
+      "WinRate": 0.4833333333333333333333333333,
+      "TotalPnl": 210.05898999222875345317488650,
+      "AvgPnl": 3.5009831665371458908862481083,
+      "AvgR": 0.0476423346234487812934032378,
+      "MaxDrawdown": 396.25038460807359951324048625,
+      "MaxDrawdownPct": 0.0158500153843229439805296194,
+      "ProfitFactor": 1.2041172652367487903261432465
+    },
+    "TrainScore": -11.958764596041457404363571200,
+    "TestScore": 14.264271465714798068547952868,
+    "FinalScore": -1.4695501713389552151989615728
+  },
+
+
+---------
+
+{
+    "TrialIndex": 180,
+    "Scanner": {
+      "ConsolidationLookbackBars": 24,
+      "MaxConsolidationRangePct": 0.0076386555869312210,
+      "MinBodyToMedianBody": 1.33120630575865812,
+      "MinVolumeToAvgVolume": 1.6193909613971552,
+      "BreakoutBufferPct": 0.000897633023978040,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.000459577718963650
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 5,
+      "EntryLimitBufferPct": 0.00009244494819661830,
+      "TakeProfitR": 0.75
+    },
+    "Train": {
+      "Trades": 100,
+      "FilledTrades": 45,
+      "Wins": 11,
+      "Losses": 34,
+      "WinRate": 0.2444444444444444444444444444,
+      "TotalPnl": -1152.2008118624123281075369750,
+      "AvgPnl": -25.604462485831385069056377222,
+      "AvgR": -0.3399806766998237896126756188,
+      "MaxDrawdown": 1177.1798440567783019640605535,
+      "MaxDrawdownPct": 0.0470871937622711320785624221,
+      "ProfitFactor": 0.1652102652695749805062763623
+    },
+    "Test": {
+      "Trades": 17,
+      "FilledTrades": 16,
+      "Wins": 11,
+      "Losses": 5,
+      "WinRate": 0.6875,
+      "TotalPnl": 223.86634724940823895412252975,
+      "AvgPnl": 13.991646703088014934632658109,
+      "AvgR": 0.1887387200365927342787352319,
+      "MaxDrawdown": 34.64914322417774863961642850,
+      "MaxDrawdownPct": 0.0013859657289671099455846571,
+      "ProfitFactor": 3.4269343745898017024923502237
+    },
+    "TrainScore": -63.005880260955741315688474922,
+    "TestScore": 71.529799816050111426106027866,
+    "FinalScore": -9.191608230153400218970673807
+  },
+
+
+---------
+
+
+{
+    "TrialIndex": 104,
+    "Scanner": {
+      "ConsolidationLookbackBars": 9,
+      "MaxConsolidationRangePct": 0.00192602840574738860,
+      "MinBodyToMedianBody": 1.4294672862763836,
+      "MinVolumeToAvgVolume": 1.8668823726321032,
+      "BreakoutBufferPct": 0.0009281518659219850,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.0008135140169474830
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 17,
+      "EntryLimitBufferPct": 0.0004962228480708885,
+      "TakeProfitR": 2.0
+    },
+    "Train": {
+      "Trades": 1,
+      "FilledTrades": 1,
+      "Wins": 0,
+      "Losses": 1,
+      "WinRate": 0,
+      "TotalPnl": -35.2903799364079226565919050,
+      "AvgPnl": -35.2903799364079226565919050,
+      "AvgR": -0.6642300770820333176280390936,
+      "MaxDrawdown": 35.2903799364079226565919050,
+      "MaxDrawdownPct": 0.0014116151974563169062636762,
+      "ProfitFactor": 0
+    },
+    "Test": {
+      "Trades": 1,
+      "FilledTrades": 1,
+      "Wins": 1,
+      "Losses": 0,
+      "WinRate": 1,
+      "TotalPnl": 98.51872559945428771045464375,
+      "AvgPnl": 98.51872559945428771045464375,
+      "AvgR": 1.4765334497356915311547202174,
+      "MaxDrawdown": 0,
+      "MaxDrawdownPct": 0,
+      "ProfitFactor": 999
+    },
+    "TrainScore": -116.49358846807614760811709317,
+    "TestScore": 10187.653344973569153115472022,
+    "FinalScore": 3005.1651849085819726813185529
+  },
+
+  --------
+
