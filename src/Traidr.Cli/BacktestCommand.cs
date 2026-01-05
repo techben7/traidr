@@ -42,7 +42,7 @@ public sealed class BacktestCommand
         var json = JsonSerializer.Serialize(result.Summary, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(summaryPath, json, ct);
 
-        _log.LogInformation("Backtest complete. Trades={Trades} Wins={Wins} Losses={Losses} NoFills={NoFills} TotalPnL={Total}",
+        _log.LogPink("Backtest complete. Trades={Trades} Wins={Wins} Losses={Losses} NoFills={NoFills} TotalPnL={Total}",
             result.Summary.Trades, result.Summary.Wins, result.Summary.Losses, result.Summary.NoFills, result.Summary.TotalPnl);
         _log.LogInformation("Outputs: {TradesPath} | {SummaryPath}", tradesPath, summaryPath);
 
