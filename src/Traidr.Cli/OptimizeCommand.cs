@@ -59,6 +59,8 @@ public sealed class OptimizeCommand
         {
             ct.ThrowIfCancellationRequested();
 
+            _log.LogYellow($"Running trail # {i}...");
+
             var trial = SampleTrial(rng, opt);
 
             var trainRun = RunOnce(trainData, opt, trial, opt.TrainFromEt, opt.TrainToEt);
@@ -98,10 +100,21 @@ public sealed class OptimizeCommand
         var ordered = results.OrderByDescending(r => r.FinalScore).ToList();
         var top = ordered.Take(opt.TopN).ToList();
 
-        var csvPath = Path.Combine(opt.OutDir, "optimization_results.csv");
+        var timestamp_Full = DateTimeOffset.Now.ToString("yyyy-MM-dd_HHmmssfff");
+
+        var outDirBase = "_BacktestOptimizationRuns";
+
+        var timestampOutDir = Path.Combine(outDirBase, timestamp_Full);
+        Directory.CreateDirectory(timestampOutDir);
+
+        // var paramsPath = Path.Combine(timestampOutDir, "trials.json");
+        // var json0 = JsonSerializer.Serialize(opt.Trials, new JsonSerializerOptions { WriteIndented = true });
+        // await File.WriteAllTextAsync(paramsPath, json0, ct);
+
+        var csvPath = Path.Combine(timestampOutDir, "optimization_results.csv");
         await File.WriteAllTextAsync(csvPath, ToCsv(ordered), ct);
 
-        var topPath = Path.Combine(opt.OutDir, "top_configs.json");
+        var topPath = Path.Combine(timestampOutDir, "top_configs.json");
         var json = JsonSerializer.Serialize(top, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(topPath, json, ct);
 
@@ -109,7 +122,7 @@ public sealed class OptimizeCommand
         _log.LogInformation("Top {N} configs (by FinalScore):", top.Count);
         foreach (var r in top)
         {
-            _log.LogInformation(
+            _log.LogPink(
                 "#{Idx} score={Score:F2} trainR={TrainR:F3} trainPF={TrainPF:F2} trainDD={TrainDD:P2} testR={TestR:F3} testPF={TestPF:F2} testDD={TestDD:P2} | lookback={Look} rangePct={Range:P2} body={Body:F2} vol={Vol:F2} fillBars={FillBars} entryBuf={EntryBuf:P2} tpR={TpR}",
                 r.TrialIndex,
                 r.FinalScore,

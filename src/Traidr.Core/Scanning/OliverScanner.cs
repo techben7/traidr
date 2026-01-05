@@ -16,18 +16,30 @@ public sealed class TraidrScanner
 
     public IReadOnlyList<SetupCandidate> Scan(IReadOnlyList<Bar> barsForManySymbols)
     {
+        var groups = barsForManySymbols
+            .GroupBy(b => b.Symbol, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(b => b.TimeUtc).ToList(),
+                StringComparer.OrdinalIgnoreCase);
+
+        return Scan(groups);
+    }
+
+    public IReadOnlyList<SetupCandidate> Scan(IReadOnlyDictionary<string, List<Bar>> barsBySymbolOrdered)
+    {
         var candidates = new List<SetupCandidate>();
 
-        foreach (var grp in barsForManySymbols.GroupBy(b => b.Symbol, StringComparer.OrdinalIgnoreCase))
+        foreach (var (symbol, bars) in barsBySymbolOrdered)
         {
-            var symbol = grp.Key;
-            var bars = grp.OrderBy(b => b.TimeUtc).ToList();
             if (bars.Count < _opt.ConsolidationLookbackBars + 2)
                 continue;
 
             // Use last closed bar as elephant bar
             var elephant = bars[^1];
-            var consolidation = bars.Skip(bars.Count - 1 - _opt.ConsolidationLookbackBars).Take(_opt.ConsolidationLookbackBars).ToList();
+            var consolidation = bars.Skip(bars.Count - 1 - _opt.ConsolidationLookbackBars)
+                .Take(_opt.ConsolidationLookbackBars)
+                .ToList();
 
             if (consolidation.Count < _opt.ConsolidationLookbackBars)
                 continue;

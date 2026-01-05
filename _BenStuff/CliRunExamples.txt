@@ -1,0 +1,17 @@
+dotnet run --project src/Traidr.Cli 
+
+----------
+
+dotnet run --project src/Traidr.Cli -- backtest \
+  --symbols SOXL,QBTS,TSLL \
+  --from 2025-06-01 \
+  --to 2025-10-01
+
+--------------
+
+dotnet run --project src/Traidr.Cli -- optimize \
+  --symbols SOXL,QBTS,TSLL,SIDU \
+  --trainFrom 2025-01-01 --trainTo 2025-03-01 \
+  --testFrom 2025-04-01 --testTo 2025-06-01 \
+  --trials 50 \
+  --out out_opt

@@ -75,8 +75,9 @@ public sealed class BacktestEngine
             foreach (var sym in openPositions.Keys.ToList())
             {
                 if (!barsBySymbol.TryGetValue(sym, out var series)) continue;
-                var bar = series.FirstOrDefault(b => b.TimeUtc == tUtc);
-                if (bar is null) continue;
+                var idx = series.BinarySearchByTime(tUtc);
+                if (idx < 0) continue;
+                var bar = series[idx];
 
                 var pos = openPositions[sym];
                 var exit = TryEvaluateExit(bar, pos, opt);
@@ -94,8 +95,9 @@ public sealed class BacktestEngine
                 foreach (var sym in openPositions.Keys.ToList())
                 {
                     if (!barsBySymbol.TryGetValue(sym, out var series)) continue;
-                    var bar = series.FirstOrDefault(b => b.TimeUtc == tUtc);
-                    if (bar is null) continue;
+                    var idx = series.BinarySearchByTime(tUtc);
+                    if (idx < 0) continue;
+                    var bar = series[idx];
 
                     var pos = openPositions[sym];
                     openPositions.Remove(sym);
@@ -105,8 +107,7 @@ public sealed class BacktestEngine
 
             // No new entries if we already have any position in that symbol
             // Build scan input (all symbol windows that have at least some bars)
-            var scanBars = windows.Values.SelectMany(x => x).ToList();
-            var candidates = _scanner.Scan(scanBars);
+            var candidates = _scanner.Scan(windows);
             if (candidates.Count == 0)
                 continue;
 
@@ -196,15 +197,7 @@ public sealed class BacktestEngine
         fillBar = null;
 
         // start from next bar after signal
-        var startIdx = -1;
-        for (var i = 0; i < series.Count; i++)
-        {
-            if (series[i].TimeUtc == signalTimeUtc)
-            {
-                startIdx = i;
-                break;
-            }
-        }
+        var startIdx = series.BinarySearchByTime(signalTimeUtc);
         if (startIdx < 0) return false;
 
         var maxIdx = Math.Min(series.Count - 1, startIdx + opt.MaxBarsToFillEntry);

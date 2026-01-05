@@ -50,8 +50,9 @@ public static class BacktestSimulator
             foreach (var sym in openPositions.Keys.ToList())
             {
                 if (!data.BarsBySymbol.TryGetValue(sym, out var series)) continue;
-                var bar = series.FirstOrDefault(b => b.TimeUtc == tUtc);
-                if (bar is null) continue;
+                var idx = series.BinarySearchByTime(tUtc);
+                if (idx < 0) continue;
+                var bar = series[idx];
 
                 var pos = openPositions[sym];
                 var exit = TryEvaluateExit(bar, pos, opt);
@@ -69,8 +70,9 @@ public static class BacktestSimulator
                 foreach (var sym in openPositions.Keys.ToList())
                 {
                     if (!data.BarsBySymbol.TryGetValue(sym, out var series)) continue;
-                    var bar = series.FirstOrDefault(b => b.TimeUtc == tUtc);
-                    if (bar is null) continue;
+                    var idx = series.BinarySearchByTime(tUtc);
+                    if (idx < 0) continue;
+                    var bar = series[idx];
 
                     var pos = openPositions[sym];
                     openPositions.Remove(sym);
@@ -79,8 +81,7 @@ public static class BacktestSimulator
             }
 
             // Scan
-            var scanBars = windows.Values.SelectMany(x => x).ToList();
-            var candidates = scanner.Scan(scanBars);
+            var candidates = scanner.Scan(windows);
             if (candidates.Count == 0)
                 continue;
 
