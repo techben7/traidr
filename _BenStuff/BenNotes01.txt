@@ -1,0 +1,24 @@
+API CALL EXAMPLES:
+
+	GOOD:
+
+				curl --request GET \
+				--url 'https://data.alpaca.markets/v1beta1/screener/stocks/movers?top=10' \
+				--header 'APCA-API-KEY-ID: PKPYU7NTN7EB5QGMF42MZEFZZT' \
+				--header 'APCA-API-SECRET-KEY: J71Evmqsosh1YPaG3gcLis7DEvm3f4f9bJhcsjCnpzC1' \
+				--header 'accept: application/json'
+
+				curl --request GET \
+				--url 'https://data.alpaca.markets/v2/stocks/bars?symbols=SOXL,PATH,GOOG&timeframe=5Min&start=2025-12-01T01%3A58%3A39.9687090Z&limit=1000&adjustment=raw&feed=sip&sort=asc' \
+				--header 'APCA-API-KEY-ID: PKPYU7NTN7EB5QGMF42MZEFZZT' \
+				--header 'APCA-API-SECRET-KEY: J71Evmqsosh1YPaG3gcLis7DEvm3f4f9bJhcsjCnpzC1' \
+				--header 'accept: application/json'
+
+	MAYBE:
+
+	BAD:
+
+-----------
+
+
+

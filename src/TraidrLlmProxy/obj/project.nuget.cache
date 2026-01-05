@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "JxzSPJ2EB1lGTrEkWo6OANf1sQmT2bFUTluDrZZlQ2yxhe2vpzTQWpQ3MilgjytGOSggEtnQMYEGm/LhGcrDUg==",
+  "success": true,
+  "projectFilePath": "/Users/bena/_BENCODE/Personal/trading/traidr/src/LlmProxy/LlmProxy.csproj",
+  "expectedPackageFiles": [
+    "/Users/bena/.nuget/packages/microsoft.aspnetcore.openapi/8.0.0/microsoft.aspnetcore.openapi.8.0.0.nupkg.sha512",
+    "/Users/bena/.nuget/packages/microsoft.openapi/1.4.3/microsoft.openapi.1.4.3.nupkg.sha512"
+  ],
+  "logs": []
+}
