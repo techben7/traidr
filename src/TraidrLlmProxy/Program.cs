@@ -4,11 +4,14 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi();
+
+// TODO: bring back once build is working
+// builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-app.MapOpenApi();
+// TODO: bring back once build is working
+// app.MapOpenApi();
 
 var proxyKey = app.Configuration["ProxyKey"] ?? "";
 
