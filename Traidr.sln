@@ -6,7 +6,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traidr.Core", "src\Traidr.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traidr.Cli", "src\Traidr.Cli\Traidr.Cli.csproj", "{B2C3D4E5-1111-2222-3333-444455556666}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TraidrLlmProxy", "src\TraidrLlmProxy\LlmProxy.csproj", "{C3D4E5F6-1111-2222-3333-444455556666}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TraidrLlm.Proxy", "src\Traidr.LlmProxy\Traidr.LlmProxy.csproj", "{C3D4E5F6-1111-2222-3333-444455556666}"
 EndProject
 Global
     GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="../buildMultiTargeting/Traidr.LlmProxy.props" />
+</Project>

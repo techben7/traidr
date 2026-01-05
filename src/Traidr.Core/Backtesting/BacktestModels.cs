@@ -91,3 +91,16 @@ public sealed record BacktestSummary(
     decimal WinRate,
     decimal AvgR,
     decimal MaxDrawdown);
+
+public sealed record OpenPosition(
+        string Symbol,
+        BreakoutDirection Direction,
+        int Quantity,
+        DateTime SignalTimeUtc,
+        DateTime EntryTimeUtc,
+        decimal EntryLimit,
+        decimal EntryPrice,
+        decimal StopPrice,
+        decimal? TakeProfitPrice,
+        SetupCandidate Candidate,
+        decimal CommissionPerTrade);

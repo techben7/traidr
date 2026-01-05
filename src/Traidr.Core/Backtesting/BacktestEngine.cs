@@ -323,18 +323,18 @@ public sealed class BacktestEngine
         return dir == BreakoutDirection.Long ? price + slip : price - slip;
     }
 
-    private sealed record OpenPosition(
-        string Symbol,
-        BreakoutDirection Direction,
-        int Quantity,
-        DateTime SignalTimeUtc,
-        DateTime EntryTimeUtc,
-        decimal EntryLimit,
-        decimal EntryPrice,
-        decimal StopPrice,
-        decimal? TakeProfitPrice,
-        SetupCandidate Candidate,
-        decimal CommissionPerTrade);
+    // public sealed record OpenPosition(
+    //     string Symbol,
+    //     BreakoutDirection Direction,
+    //     int Quantity,
+    //     DateTime SignalTimeUtc,
+    //     DateTime EntryTimeUtc,
+    //     decimal EntryLimit,
+    //     decimal EntryPrice,
+    //     decimal StopPrice,
+    //     decimal? TakeProfitPrice,
+    //     SetupCandidate Candidate,
+    //     decimal CommissionPerTrade);
 }
 
 public sealed record BacktestResult(IReadOnlyList<BacktestTrade> Trades, BacktestSummary Summary)

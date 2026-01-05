@@ -177,16 +177,16 @@ public static class BacktestSimulator
     private static BacktestTrade ForceExitEod(Bar bar, OpenPosition pos, BacktestOptions opt)
         => BacktestEngine.ForceExitEod(bar, pos, opt);
 
-    private sealed record OpenPosition(
-        string Symbol,
-        BreakoutDirection Direction,
-        int Quantity,
-        DateTime SignalTimeUtc,
-        DateTime EntryTimeUtc,
-        decimal EntryLimit,
-        decimal EntryPrice,
-        decimal StopPrice,
-        decimal? TakeProfitPrice,
-        SetupCandidate Candidate,
-        decimal CommissionPerTrade);
+    // private sealed record OpenPosition(
+    //     string Symbol,
+    //     BreakoutDirection Direction,
+    //     int Quantity,
+    //     DateTime SignalTimeUtc,
+    //     DateTime EntryTimeUtc,
+    //     decimal EntryLimit,
+    //     decimal EntryPrice,
+    //     decimal StopPrice,
+    //     decimal? TakeProfitPrice,
+    //     SetupCandidate Candidate,
+    //     decimal CommissionPerTrade);
 }

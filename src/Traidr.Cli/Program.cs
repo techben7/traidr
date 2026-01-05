@@ -102,18 +102,18 @@ var runner = provider.GetRequiredService<Traidr.Cli.Runner>();
 if (args.Length > 0 && string.Equals(args[0], "backtest", StringComparison.OrdinalIgnoreCase))
 {
     var cmd = provider.GetRequiredService<Traidr.Cli.BacktestCommand>();
-    using var cts = new CancellationTokenSource();
-    Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-    await cmd.RunAsync(args, cts.Token);
+    using var cts0 = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts0.Cancel(); };
+    await cmd.RunAsync(args, cts0.Token);
     return;
 }
 
 if (args.Length > 0 && string.Equals(args[0], "optimize", StringComparison.OrdinalIgnoreCase))
 {
     var cmd = provider.GetRequiredService<Traidr.Cli.OptimizeCommand>();
-    using var cts = new CancellationTokenSource();
-    Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-    await cmd.RunAsync(args, cts.Token);
+    using var cts1 = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts1.Cancel(); };
+    await cmd.RunAsync(args, cts1.Token);
     return;
 }
 

@@ -78,11 +78,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/bena/_BENCODE/Personal/trading/traidr/src/LlmProxy/LlmProxy.csproj",
-      "projectName": "LlmProxy",
-      "projectPath": "/Users/bena/_BENCODE/Personal/trading/traidr/src/LlmProxy/LlmProxy.csproj",
+      "projectUniqueName": "/Users/bena/_BENCODE/Personal/trading/traidr/src/Traidr.LlmProxy/Traidr.LlmProxy.csproj",
+      "projectName": "Traidr.LlmProxy",
+      "projectPath": "/Users/bena/_BENCODE/Personal/trading/traidr/src/Traidr.LlmProxy/Traidr.LlmProxy.csproj",
       "packagesPath": "/Users/bena/.nuget/packages/",
-      "outputPath": "/Users/bena/_BENCODE/Personal/trading/traidr/src/LlmProxy/obj/",
+      "outputPath": "/Users/bena/_BENCODE/Personal/trading/traidr/src/Traidr.LlmProxy/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/bena/.nuget/NuGet/NuGet.Config"

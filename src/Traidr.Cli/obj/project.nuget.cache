@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "rYld9tH1h0hXMWEUCDvPFwiPgeIiGcBA2b1V6pl8UtPbplU6LhzJt1wnm02nE9p4m+XUI2Ik52qZVomWGyYreQ==",
+  "dgSpecHash": "FfBW8ICLfQ7dklB+9VLmnVT66/dKCQLtRnLstoFhxcBTYt7VCwxINvUaPEOJImVt2DhUsMp6Q794jv76TX/jWA==",
   "success": true,
   "projectFilePath": "/Users/bena/_BENCODE/Personal/trading/traidr/src/Traidr.Cli/Traidr.Cli.csproj",
   "expectedPackageFiles": [
