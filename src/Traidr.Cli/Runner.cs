@@ -113,8 +113,20 @@ public sealed class Runner
 
             var entry = s.EntryPrice ?? c.EntryPrice;
             var stop = s.StopPrice ?? c.StopPrice;
+            decimal? takeProfit = s.TakeProfitPrice;
+            if (strategy == TradingStrategy.Emmanuel && !takeProfit.HasValue)
+            {
+                var tpR = _cfg.GetValue("Execution:Emmanuel:TakeProfitR", 2.0m);
+                var riskPerShare = Math.Abs(entry - stop);
+                if (riskPerShare > 0m)
+                {
+                    takeProfit = c.Direction == BreakoutDirection.Long
+                        ? entry + (riskPerShare * tpR)
+                        : entry - (riskPerShare * tpR);
+                }
+            }
 
-            var decision = _risk.Evaluate(c with { EntryPrice = entry, StopPrice = stop }, s.TakeProfitPrice, nowUtc);
+            var decision = _risk.Evaluate(c with { EntryPrice = entry, StopPrice = stop }, takeProfit, nowUtc);
             if (decision.Decision == RiskDecisionType.Block)
             {
                 _log.LogInformation("RISK BLOCK: {Symbol} {Reason}", c.Symbol, decision.Reason);
@@ -129,7 +141,7 @@ public sealed class Runner
                 Quantity: qty,
                 EntryPrice: entry,
                 StopPrice: stop,
-                TakeProfitPrice: s.TakeProfitPrice);
+                TakeProfitPrice: takeProfit);
 
             _log.LogGreen("EXECUTE: {Symbol} qty={Qty} estRisk={Risk} tp={Tp}",
                 c.Symbol, qty, decision.EstimatedRiskDollars, s.TakeProfitPrice);

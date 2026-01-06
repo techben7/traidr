@@ -34,6 +34,7 @@ services.AddSingleton(configuration.GetSection("PreFilter").Get<PreFilterOptions
 services.AddSingleton(configuration.GetSection("Indicators").Get<IndicatorCalculatorOptions>() ?? new IndicatorCalculatorOptions());
 services.AddSingleton(configuration.GetSection("TraidrScanner").Get<TraidrScannerOptions>() ?? new TraidrScannerOptions());
 services.AddSingleton(configuration.GetSection("CameronRossScanner").Get<CameronRossScannerOptions>() ?? new CameronRossScannerOptions());
+services.AddSingleton(configuration.GetSection("EmmanuelScanner").Get<EmmanuelScannerOptions>() ?? new EmmanuelScannerOptions());
 services.AddSingleton(configuration.GetSection("Llm").Get<LlmProxyOptions>() ?? new LlmProxyOptions());
 services.AddSingleton(configuration.GetSection("Risk").Get<RiskManagerOptions>() ?? new RiskManagerOptions());
 services.AddSingleton(configuration.GetSection("Webull").Get<WebullOpenApiOptions>() ?? new WebullOpenApiOptions());

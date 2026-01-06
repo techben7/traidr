@@ -4,6 +4,7 @@ namespace Traidr.Core.Indicators;
 
 public sealed record IndicatorSeries(
     IReadOnlyList<DateTime> TimeUtc,
+    IReadOnlyList<decimal?> Ema9,
     IReadOnlyList<decimal?> Ema20,
     IReadOnlyList<decimal?> Ema200,
     IReadOnlyList<decimal?> Vwap,
@@ -11,6 +12,7 @@ public sealed record IndicatorSeries(
 
 public sealed record IndicatorCalculatorOptions
 {
+    public int EmaMidPeriod { get; init; } = 9;
     public int EmaFastPeriod { get; init; } = 20;
     public int EmaSlowPeriod { get; init; } = 200;
     public int AtrPeriod { get; init; } = 14;
@@ -29,7 +31,13 @@ public sealed class IndicatorCalculator
     public IndicatorSeries Compute(IReadOnlyList<Bar> bars)
     {
         if (bars.Count == 0)
-            return new IndicatorSeries(Array.Empty<DateTime>(), Array.Empty<decimal?>(), Array.Empty<decimal?>(), Array.Empty<decimal?>(), Array.Empty<decimal?>());
+            return new IndicatorSeries(
+                Array.Empty<DateTime>(),
+                Array.Empty<decimal?>(),
+                Array.Empty<decimal?>(),
+                Array.Empty<decimal?>(),
+                Array.Empty<decimal?>(),
+                Array.Empty<decimal?>());
 
         var ordered = bars.OrderBy(b => b.TimeUtc).ToList();
         var times = ordered.Select(x => x.TimeUtc).ToArray();
@@ -39,6 +47,7 @@ public sealed class IndicatorCalculator
         var lows = ordered.Select(x => x.Low).ToArray();
         var vols = ordered.Select(x => (decimal)x.Volume).ToArray();
 
+        var emaMid = ComputeEma(closes, _opt.EmaMidPeriod);
         var emaFast = ComputeEma(closes, _opt.EmaFastPeriod);
         var emaSlow = ComputeEma(closes, _opt.EmaSlowPeriod);
 
@@ -46,7 +55,7 @@ public sealed class IndicatorCalculator
 
         var vwap = _opt.ComputeVwap ? ComputeVwap(highs, lows, closes, vols) : Enumerable.Repeat<decimal?>(null, bars.Count).ToArray();
 
-        return new IndicatorSeries(times, emaFast, emaSlow, vwap, atr);
+        return new IndicatorSeries(times, emaMid, emaFast, emaSlow, vwap, atr);
     }
 
     public static decimal?[] ComputeEma(decimal[] values, int period)

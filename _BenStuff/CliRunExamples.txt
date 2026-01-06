@@ -117,3 +117,22 @@ dotnet run --project src/Traidr.Cli -- optimize --strategy CameronRoss \
 dotnet run --project src/Traidr.Cli -- backtest --strategy CameronRoss \
   --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
   --from 2025-06-01 --to 2026-01-03
+
+
+----------------
+
+
+dotnet run --project src/Traidr.Cli -- optimize --strategy Emmanuel \
+  --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --trainFrom 2025-06-01 --trainTo 2025-11-30 \
+  --testFrom 2025-12-01 --testTo 2026-01-03 \
+  --trials 200 --top 20
+
+
+-------
+
+dotnet run --project src/Traidr.Cli -- backtest --strategy Emmanuel \
+  --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --from 2025-06-01 --to 2026-01-03
+
+-------

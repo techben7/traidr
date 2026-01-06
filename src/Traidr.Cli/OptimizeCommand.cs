@@ -61,9 +61,12 @@ public sealed class OptimizeCommand
 
             _log.LogYellow($"Running trail # {i}...");
 
-            var trial = opt.Strategy == TradingStrategy.CameronRoss
-                ? SampleCameronTrial(rng, opt)
-                : SampleOliverTrial(rng, opt);
+            var trial = opt.Strategy switch
+            {
+                TradingStrategy.CameronRoss => SampleCameronTrial(rng, opt),
+                TradingStrategy.Emmanuel => SampleEmmanuelTrial(rng, opt),
+                _ => SampleOliverTrial(rng, opt)
+            };
 
             var trainRun = RunOnce(trainData, opt, trial, opt.TrainFromEt, opt.TrainToEt);
             var testRun = RunOnce(testData, opt, trial, opt.TestFromEt, opt.TestToEt);
@@ -92,6 +95,7 @@ public sealed class OptimizeCommand
                 Strategy = trial.Strategy,
                 OliverScanner = trial.OliverScanner,
                 CameronScanner = trial.CameronScanner,
+                EmmanuelScanner = trial.EmmanuelScanner,
                 Backtest = trial.Backtest,
                 Train = trainMetrics,
                 Test = testMetrics,
@@ -150,6 +154,31 @@ public sealed class OptimizeCommand
                 continue;
             }
 
+            if (r.Strategy == TradingStrategy.Emmanuel && r.EmmanuelScanner is not null)
+            {
+                var s = r.EmmanuelScanner;
+                _log.LogPink(
+                    "#{Idx} score={Score:F2} trainR={TrainR:F3} trainPF={TrainPF:F2} trainDD={TrainDD:P2} testR={TestR:F3} testPF={TestPF:F2} testDD={TestDD:P2} | gap={Gap:P0} pmVol={PmVol:N0} rvol={Rvol:F1} pole={Pole:P0} flag={Flag:P0} stopBuf=${Stop:F2} fillBars={FillBars} entryBuf={EntryBuf:P2} tpR={TpR}",
+                    r.TrialIndex,
+                    r.FinalScore,
+                    r.Train.AvgR,
+                    r.Train.ProfitFactor,
+                    r.Train.MaxDrawdownPct,
+                    r.Test.AvgR,
+                    r.Test.ProfitFactor,
+                    r.Test.MaxDrawdownPct,
+                    s.MinGapPct,
+                    s.MinPremarketVolume,
+                    s.MinRvol,
+                    s.MinPolePct,
+                    s.MaxFlagRetracePct,
+                    s.StopBufferCents,
+                    r.Backtest.MaxBarsToFillEntry,
+                    r.Backtest.EntryLimitBufferPct,
+                    r.Backtest.TakeProfitR?.ToString(CultureInfo.InvariantCulture) ?? "null");
+                continue;
+            }
+
             if (r.OliverScanner is not null)
             {
                 var s = r.OliverScanner;
@@ -181,7 +210,7 @@ public sealed class OptimizeCommand
         // Fresh state per run
         var riskState = new InMemoryRiskState();
         var risk = new RiskManager(riskState, _riskOptions);
-        var scanner = _scannerFactory.Create(trial.Strategy, trial.OliverScanner, trial.CameronScanner);
+        var scanner = _scannerFactory.Create(trial.Strategy, trial.OliverScanner, trial.CameronScanner, trial.EmmanuelScanner);
 
         var runOpt = new BacktestOptions
         {
@@ -254,6 +283,7 @@ public sealed class OptimizeCommand
             Strategy: TradingStrategy.Oliver,
             OliverScanner: scanner,
             CameronScanner: null,
+            EmmanuelScanner: null,
             Backtest: backtest);
     }
 
@@ -304,6 +334,62 @@ public sealed class OptimizeCommand
             Strategy: TradingStrategy.CameronRoss,
             OliverScanner: null,
             CameronScanner: scanner,
+            EmmanuelScanner: null,
+            Backtest: backtest);
+    }
+
+    private static TrialSettings SampleEmmanuelTrial(Random rng, OptimizeOptions opt)
+    {
+        decimal RandDecimal(decimal min, decimal max)
+        {
+            var u = (decimal)rng.NextDouble();
+            return min + (u * (max - min));
+        }
+
+        var scanner = new EmmanuelScannerOptions
+        {
+            MinPrice = RandDecimal(opt.EmMinPriceMin, opt.EmMinPriceMax),
+            MaxPrice = RandDecimal(opt.EmMaxPriceMin, opt.EmMaxPriceMax),
+            MinGapPct = RandDecimal(opt.EmMinGapPctMin, opt.EmMinGapPctMax),
+            MinPremarketVolume = rng.Next(opt.EmPremarketVolumeMin, opt.EmPremarketVolumeMax + 1),
+            PremarketStartEt = opt.EmPremarketStartEt,
+            PremarketEndEt = opt.EmPremarketEndEt,
+            RequireLowFloat = opt.EmRequireLowFloat,
+            MaxFloatShares = opt.EmMaxFloatShares,
+            RequireRvol = opt.EmRequireRvol,
+            RvolLookbackDays = rng.Next(opt.EmRvolLookbackMin, opt.EmRvolLookbackMax + 1),
+            MinRvol = RandDecimal(opt.EmMinRvolMin, opt.EmMinRvolMax),
+            RequirePriceAboveVwap = opt.EmRequirePriceAboveVwap,
+            RequireVwapSlopeUp = opt.EmRequireVwapSlopeUp,
+            VwapSlopeBars = rng.Next(opt.EmVwapSlopeBarsMin, opt.EmVwapSlopeBarsMax + 1),
+            RequireTightSpread = opt.EmRequireTightSpread,
+            MaxSpreadCents = RandDecimal(opt.EmMaxSpreadCentsMin, opt.EmMaxSpreadCentsMax),
+            UseBarRangeAsSpreadProxy = opt.EmUseBarRangeAsSpreadProxy,
+            MaxBarRangePctOfAtr = RandDecimal(opt.EmMaxBarRangePctAtrMin, opt.EmMaxBarRangePctAtrMax),
+            RequireEma9Hook = opt.EmRequireEma9Hook,
+            RequireEma9AboveEma20 = opt.EmRequireEma9AboveEma20,
+            RequireBullFlag = opt.EmRequireBullFlag,
+            PoleLookbackBars = rng.Next(opt.EmPoleLookbackMin, opt.EmPoleLookbackMax + 1),
+            MinPolePct = RandDecimal(opt.EmMinPolePctMin, opt.EmMinPolePctMax),
+            FlagBars = rng.Next(opt.EmFlagBarsMin, opt.EmFlagBarsMax + 1),
+            MaxFlagRetracePct = RandDecimal(opt.EmMaxFlagRetracePctMin, opt.EmMaxFlagRetracePctMax),
+            RequireLowerFlagVolume = opt.EmRequireLowerFlagVolume,
+            EntryBufferCents = RandDecimal(opt.EmEntryBufferCentsMin, opt.EmEntryBufferCentsMax),
+            StopBufferCents = RandDecimal(opt.EmStopBufferCentsMin, opt.EmStopBufferCentsMax)
+        };
+
+        var backtest = new TrialBacktestSettings
+        {
+            MaxBarsToFillEntry = rng.Next(opt.FillBarsMin, opt.FillBarsMax + 1),
+            EntryLimitBufferPct = RandDecimal(opt.EntryBufferMin, opt.EntryBufferMax),
+            TakeProfitR = SampleTp(rng, opt.TpRValues)
+        };
+
+        return new TrialSettings(
+            Strategy: TradingStrategy.Emmanuel,
+            OliverScanner: null,
+            CameronScanner: null,
+            EmmanuelScanner: scanner,
             Backtest: backtest);
     }
 
@@ -358,6 +444,7 @@ public sealed class OptimizeCommand
             "trial,strategy,finalScore,trainScore,testScore," +
             "lookback,maxRangePct,minBodyToMedian,minVolToAvg,breakoutBuf,stopBuf," +
             "camMinPrice,camMaxPrice,camMinGapPct,camMinDayGainPct,camMinRvol,camPullbackBars,camMaxPullbackPct,camStopCents,camRoundBreakDist," +
+            "emMinPrice,emMaxPrice,emMinGapPct,emMinPremarketVol,emMinRvol,emPoleBars,emMinPolePct,emFlagBars,emMaxFlagRetrace,emEntryBufCents,emStopBufCents," +
             "fillBars,entryBuf,tpR," +
             "trainFilled,trainAvgR,trainPF,trainDDPct,trainTotalPnl,trainWinRate," +
             "testFilled,testAvgR,testPF,testDDPct,testTotalPnl,testWinRate");
@@ -366,6 +453,7 @@ public sealed class OptimizeCommand
         {
             var oliver = r.OliverScanner;
             var cam = r.CameronScanner;
+            var em = r.EmmanuelScanner;
 
             sb.Append(r.TrialIndex).Append(',')
               .Append(r.Strategy).Append(',')
@@ -389,6 +477,18 @@ public sealed class OptimizeCommand
               .Append(cam?.MaxPullbackPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
               .Append(cam?.StopCents.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
               .Append(cam?.RoundBreakMaxDistance.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+
+              .Append(em?.MinPrice.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(em?.MaxPrice.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(em?.MinGapPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(em?.MinPremarketVolume.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(em?.MinRvol.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(em?.PoleLookbackBars.ToString() ?? "").Append(',')
+              .Append(em?.MinPolePct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(em?.FlagBars.ToString() ?? "").Append(',')
+              .Append(em?.MaxFlagRetracePct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(em?.EntryBufferCents.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(em?.StopBufferCents.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
 
               .Append(r.Backtest.MaxBarsToFillEntry).Append(',')
               .Append(r.Backtest.EntryLimitBufferPct.ToString(CultureInfo.InvariantCulture)).Append(',')
@@ -569,6 +669,57 @@ public sealed class OptimizeCommand
             _cfg.GetValue<string>("Optimize:CameronFixed:EndTimeEt") ?? "10:30",
             CultureInfo.InvariantCulture);
 
+        // Emmanuel ranges
+        p.EmMinPriceMin = _cfg.GetValue("Optimize:EmmanuelRanges:MinPriceMin", 1.0m);
+        p.EmMinPriceMax = _cfg.GetValue("Optimize:EmmanuelRanges:MinPriceMax", 5.0m);
+        p.EmMaxPriceMin = _cfg.GetValue("Optimize:EmmanuelRanges:MaxPriceMin", 10.0m);
+        p.EmMaxPriceMax = _cfg.GetValue("Optimize:EmmanuelRanges:MaxPriceMax", 20.0m);
+        p.EmMinGapPctMin = _cfg.GetValue("Optimize:EmmanuelRanges:MinGapPctMin", 0.04m);
+        p.EmMinGapPctMax = _cfg.GetValue("Optimize:EmmanuelRanges:MinGapPctMax", 0.15m);
+        p.EmPremarketVolumeMin = _cfg.GetValue("Optimize:EmmanuelRanges:PremarketVolumeMin", 100_000);
+        p.EmPremarketVolumeMax = _cfg.GetValue("Optimize:EmmanuelRanges:PremarketVolumeMax", 500_000);
+        p.EmMinRvolMin = _cfg.GetValue("Optimize:EmmanuelRanges:MinRvolMin", 2.0m);
+        p.EmMinRvolMax = _cfg.GetValue("Optimize:EmmanuelRanges:MinRvolMax", 8.0m);
+        p.EmRvolLookbackMin = _cfg.GetValue("Optimize:EmmanuelRanges:RvolLookbackMin", 5);
+        p.EmRvolLookbackMax = _cfg.GetValue("Optimize:EmmanuelRanges:RvolLookbackMax", 15);
+        p.EmVwapSlopeBarsMin = _cfg.GetValue("Optimize:EmmanuelRanges:VwapSlopeBarsMin", 3);
+        p.EmVwapSlopeBarsMax = _cfg.GetValue("Optimize:EmmanuelRanges:VwapSlopeBarsMax", 8);
+        p.EmMaxSpreadCentsMin = _cfg.GetValue("Optimize:EmmanuelRanges:MaxSpreadCentsMin", 0.01m);
+        p.EmMaxSpreadCentsMax = _cfg.GetValue("Optimize:EmmanuelRanges:MaxSpreadCentsMax", 0.03m);
+        p.EmMaxBarRangePctAtrMin = _cfg.GetValue("Optimize:EmmanuelRanges:MaxBarRangePctAtrMin", 0.15m);
+        p.EmMaxBarRangePctAtrMax = _cfg.GetValue("Optimize:EmmanuelRanges:MaxBarRangePctAtrMax", 0.35m);
+        p.EmPoleLookbackMin = _cfg.GetValue("Optimize:EmmanuelRanges:PoleLookbackMin", 6);
+        p.EmPoleLookbackMax = _cfg.GetValue("Optimize:EmmanuelRanges:PoleLookbackMax", 12);
+        p.EmMinPolePctMin = _cfg.GetValue("Optimize:EmmanuelRanges:MinPolePctMin", 0.04m);
+        p.EmMinPolePctMax = _cfg.GetValue("Optimize:EmmanuelRanges:MinPolePctMax", 0.12m);
+        p.EmFlagBarsMin = _cfg.GetValue("Optimize:EmmanuelRanges:FlagBarsMin", 2);
+        p.EmFlagBarsMax = _cfg.GetValue("Optimize:EmmanuelRanges:FlagBarsMax", 5);
+        p.EmMaxFlagRetracePctMin = _cfg.GetValue("Optimize:EmmanuelRanges:MaxFlagRetracePctMin", 0.20m);
+        p.EmMaxFlagRetracePctMax = _cfg.GetValue("Optimize:EmmanuelRanges:MaxFlagRetracePctMax", 0.45m);
+        p.EmEntryBufferCentsMin = _cfg.GetValue("Optimize:EmmanuelRanges:EntryBufferCentsMin", 0.01m);
+        p.EmEntryBufferCentsMax = _cfg.GetValue("Optimize:EmmanuelRanges:EntryBufferCentsMax", 0.03m);
+        p.EmStopBufferCentsMin = _cfg.GetValue("Optimize:EmmanuelRanges:StopBufferCentsMin", 0.00m);
+        p.EmStopBufferCentsMax = _cfg.GetValue("Optimize:EmmanuelRanges:StopBufferCentsMax", 0.03m);
+
+        // Emmanuel fixed settings
+        p.EmRequireLowFloat = _cfg.GetValue("Optimize:EmmanuelFixed:RequireLowFloat", false);
+        p.EmMaxFloatShares = _cfg.GetValue("Optimize:EmmanuelFixed:MaxFloatShares", 20_000_000L);
+        p.EmRequireRvol = _cfg.GetValue("Optimize:EmmanuelFixed:RequireRvol", true);
+        p.EmRequirePriceAboveVwap = _cfg.GetValue("Optimize:EmmanuelFixed:RequirePriceAboveVwap", true);
+        p.EmRequireVwapSlopeUp = _cfg.GetValue("Optimize:EmmanuelFixed:RequireVwapSlopeUp", true);
+        p.EmRequireTightSpread = _cfg.GetValue("Optimize:EmmanuelFixed:RequireTightSpread", true);
+        p.EmUseBarRangeAsSpreadProxy = _cfg.GetValue("Optimize:EmmanuelFixed:UseBarRangeAsSpreadProxy", true);
+        p.EmRequireEma9Hook = _cfg.GetValue("Optimize:EmmanuelFixed:RequireEma9Hook", true);
+        p.EmRequireEma9AboveEma20 = _cfg.GetValue("Optimize:EmmanuelFixed:RequireEma9AboveEma20", false);
+        p.EmRequireBullFlag = _cfg.GetValue("Optimize:EmmanuelFixed:RequireBullFlag", true);
+        p.EmRequireLowerFlagVolume = _cfg.GetValue("Optimize:EmmanuelFixed:RequireLowerFlagVolume", true);
+        p.EmPremarketStartEt = TimeSpan.Parse(
+            _cfg.GetValue<string>("Optimize:EmmanuelFixed:PremarketStartEt") ?? "04:00",
+            CultureInfo.InvariantCulture);
+        p.EmPremarketEndEt = TimeSpan.Parse(
+            _cfg.GetValue<string>("Optimize:EmmanuelFixed:PremarketEndEt") ?? "09:00",
+            CultureInfo.InvariantCulture);
+
         return p;
 
         static IReadOnlyList<decimal?> ParseTpValues(string csv)
@@ -703,12 +854,60 @@ public sealed record OptimizeOptions
     public bool CamUseFixedStopCents { get; set; }
     public TimeSpan CamStartTimeEt { get; set; }
     public TimeSpan CamEndTimeEt { get; set; }
+
+    // Emmanuel ranges
+    public decimal EmMinPriceMin { get; set; }
+    public decimal EmMinPriceMax { get; set; }
+    public decimal EmMaxPriceMin { get; set; }
+    public decimal EmMaxPriceMax { get; set; }
+    public decimal EmMinGapPctMin { get; set; }
+    public decimal EmMinGapPctMax { get; set; }
+    public int EmPremarketVolumeMin { get; set; }
+    public int EmPremarketVolumeMax { get; set; }
+    public decimal EmMinRvolMin { get; set; }
+    public decimal EmMinRvolMax { get; set; }
+    public int EmRvolLookbackMin { get; set; }
+    public int EmRvolLookbackMax { get; set; }
+    public int EmVwapSlopeBarsMin { get; set; }
+    public int EmVwapSlopeBarsMax { get; set; }
+    public decimal EmMaxSpreadCentsMin { get; set; }
+    public decimal EmMaxSpreadCentsMax { get; set; }
+    public decimal EmMaxBarRangePctAtrMin { get; set; }
+    public decimal EmMaxBarRangePctAtrMax { get; set; }
+    public int EmPoleLookbackMin { get; set; }
+    public int EmPoleLookbackMax { get; set; }
+    public decimal EmMinPolePctMin { get; set; }
+    public decimal EmMinPolePctMax { get; set; }
+    public int EmFlagBarsMin { get; set; }
+    public int EmFlagBarsMax { get; set; }
+    public decimal EmMaxFlagRetracePctMin { get; set; }
+    public decimal EmMaxFlagRetracePctMax { get; set; }
+    public decimal EmEntryBufferCentsMin { get; set; }
+    public decimal EmEntryBufferCentsMax { get; set; }
+    public decimal EmStopBufferCentsMin { get; set; }
+    public decimal EmStopBufferCentsMax { get; set; }
+
+    // Emmanuel fixed settings
+    public bool EmRequireLowFloat { get; set; }
+    public long EmMaxFloatShares { get; set; }
+    public bool EmRequireRvol { get; set; }
+    public bool EmRequirePriceAboveVwap { get; set; }
+    public bool EmRequireVwapSlopeUp { get; set; }
+    public bool EmRequireTightSpread { get; set; }
+    public bool EmUseBarRangeAsSpreadProxy { get; set; }
+    public bool EmRequireEma9Hook { get; set; }
+    public bool EmRequireEma9AboveEma20 { get; set; }
+    public bool EmRequireBullFlag { get; set; }
+    public bool EmRequireLowerFlagVolume { get; set; }
+    public TimeSpan EmPremarketStartEt { get; set; }
+    public TimeSpan EmPremarketEndEt { get; set; }
 }
 
 public sealed record TrialSettings(
     TradingStrategy Strategy,
     TraidrScannerOptions? OliverScanner,
     CameronRossScannerOptions? CameronScanner,
+    EmmanuelScannerOptions? EmmanuelScanner,
     TrialBacktestSettings Backtest);
 
 public sealed record TrialBacktestSettings
@@ -739,6 +938,7 @@ public sealed record OptimizeTrialResult
     public TradingStrategy Strategy { get; init; }
     public TraidrScannerOptions? OliverScanner { get; init; }
     public CameronRossScannerOptions? CameronScanner { get; init; }
+    public EmmanuelScannerOptions? EmmanuelScanner { get; init; }
     public required TrialBacktestSettings Backtest { get; init; }
     public required OptimizeMetrics Train { get; init; }
     public required OptimizeMetrics Test { get; init; }
