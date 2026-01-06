@@ -4,7 +4,6 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traidr.Core.Backtesting;
-using Traidr.Core.Indicators;
 using Traidr.Core.MarketData;
 using Traidr.Core.Scanning;
 using Traidr.Core.Trading;
@@ -16,21 +15,21 @@ public sealed class OptimizeCommand
     private readonly ILogger<OptimizeCommand> _log;
     private readonly IConfiguration _cfg;
     private readonly IMarketDataClient _marketData;
-    private readonly IndicatorCalculatorOptions _indicatorOptions;
     private readonly RiskManagerOptions _riskOptions;
+    private readonly IStrategyScannerFactory _scannerFactory;
 
     public OptimizeCommand(
         ILogger<OptimizeCommand> log,
         IConfiguration cfg,
         IMarketDataClient marketData,
-        IndicatorCalculatorOptions indicatorOptions,
-        RiskManagerOptions riskOptions)
+        RiskManagerOptions riskOptions,
+        IStrategyScannerFactory scannerFactory)
     {
         _log = log;
         _cfg = cfg;
         _marketData = marketData;
-        _indicatorOptions = indicatorOptions;
         _riskOptions = riskOptions;
+        _scannerFactory = scannerFactory;
     }
 
     public async Task<int> RunAsync(string[] args, CancellationToken ct = default)
@@ -38,7 +37,8 @@ public sealed class OptimizeCommand
         var opt = ParseArgs(args);
 
         _log.LogInformation(
-            "Optimize trials={Trials} symbols={Symbols} train={TrainFrom}..{TrainTo} test={TestFrom}..{TestTo}",
+            "Optimize strategy={Strategy} trials={Trials} symbols={Symbols} train={TrainFrom}..{TrainTo} test={TestFrom}..{TestTo}",
+            opt.Strategy,
             opt.Trials,
             string.Join(',', opt.Symbols),
             opt.TrainFromEt, opt.TrainToEt,
@@ -61,7 +61,9 @@ public sealed class OptimizeCommand
 
             _log.LogYellow($"Running trail # {i}...");
 
-            var trial = SampleTrial(rng, opt);
+            var trial = opt.Strategy == TradingStrategy.CameronRoss
+                ? SampleCameronTrial(rng, opt)
+                : SampleOliverTrial(rng, opt);
 
             var trainRun = RunOnce(trainData, opt, trial, opt.TrainFromEt, opt.TrainToEt);
             var testRun = RunOnce(testData, opt, trial, opt.TestFromEt, opt.TestToEt);
@@ -87,7 +89,9 @@ public sealed class OptimizeCommand
             results.Add(new OptimizeTrialResult
             {
                 TrialIndex = i + 1,
-                Scanner = trial.Scanner,
+                Strategy = trial.Strategy,
+                OliverScanner = trial.OliverScanner,
+                CameronScanner = trial.CameronScanner,
                 Backtest = trial.Backtest,
                 Train = trainMetrics,
                 Test = testMetrics,
@@ -122,23 +126,51 @@ public sealed class OptimizeCommand
         _log.LogInformation("Top {N} configs (by FinalScore):", top.Count);
         foreach (var r in top)
         {
-            _log.LogPink(
-                "#{Idx} score={Score:F2} trainR={TrainR:F3} trainPF={TrainPF:F2} trainDD={TrainDD:P2} testR={TestR:F3} testPF={TestPF:F2} testDD={TestDD:P2} | lookback={Look} rangePct={Range:P2} body={Body:F2} vol={Vol:F2} fillBars={FillBars} entryBuf={EntryBuf:P2} tpR={TpR}",
-                r.TrialIndex,
-                r.FinalScore,
-                r.Train.AvgR,
-                r.Train.ProfitFactor,
-                r.Train.MaxDrawdownPct,
-                r.Test.AvgR,
-                r.Test.ProfitFactor,
-                r.Test.MaxDrawdownPct,
-                r.Scanner.ConsolidationLookbackBars,
-                r.Scanner.MaxConsolidationRangePct,
-                r.Scanner.MinBodyToMedianBody,
-                r.Scanner.MinVolumeToAvgVolume,
-                r.Backtest.MaxBarsToFillEntry,
-                r.Backtest.EntryLimitBufferPct,
-                r.Backtest.TakeProfitR?.ToString(CultureInfo.InvariantCulture) ?? "null");
+            if (r.Strategy == TradingStrategy.CameronRoss && r.CameronScanner is not null)
+            {
+                var s = r.CameronScanner;
+                _log.LogPink(
+                    "#{Idx} score={Score:F2} trainR={TrainR:F3} trainPF={TrainPF:F2} trainDD={TrainDD:P2} testR={TestR:F3} testPF={TestPF:F2} testDD={TestDD:P2} | gap={Gap:P0} gain={Gain:P0} rvol={Rvol:F1} pullback={Pb:P1} stop=${Stop:F2} fillBars={FillBars} entryBuf={EntryBuf:P2} tpR={TpR}",
+                    r.TrialIndex,
+                    r.FinalScore,
+                    r.Train.AvgR,
+                    r.Train.ProfitFactor,
+                    r.Train.MaxDrawdownPct,
+                    r.Test.AvgR,
+                    r.Test.ProfitFactor,
+                    r.Test.MaxDrawdownPct,
+                    s.MinGapPct,
+                    s.MinDayGainPct,
+                    s.MinRvol,
+                    s.MaxPullbackPct,
+                    s.StopCents,
+                    r.Backtest.MaxBarsToFillEntry,
+                    r.Backtest.EntryLimitBufferPct,
+                    r.Backtest.TakeProfitR?.ToString(CultureInfo.InvariantCulture) ?? "null");
+                continue;
+            }
+
+            if (r.OliverScanner is not null)
+            {
+                var s = r.OliverScanner;
+                _log.LogPink(
+                    "#{Idx} score={Score:F2} trainR={TrainR:F3} trainPF={TrainPF:F2} trainDD={TrainDD:P2} testR={TestR:F3} testPF={TestPF:F2} testDD={TestDD:P2} | lookback={Look} rangePct={Range:P2} body={Body:F2} vol={Vol:F2} fillBars={FillBars} entryBuf={EntryBuf:P2} tpR={TpR}",
+                    r.TrialIndex,
+                    r.FinalScore,
+                    r.Train.AvgR,
+                    r.Train.ProfitFactor,
+                    r.Train.MaxDrawdownPct,
+                    r.Test.AvgR,
+                    r.Test.ProfitFactor,
+                    r.Test.MaxDrawdownPct,
+                    s.ConsolidationLookbackBars,
+                    s.MaxConsolidationRangePct,
+                    s.MinBodyToMedianBody,
+                    s.MinVolumeToAvgVolume,
+                    r.Backtest.MaxBarsToFillEntry,
+                    r.Backtest.EntryLimitBufferPct,
+                    r.Backtest.TakeProfitR?.ToString(CultureInfo.InvariantCulture) ?? "null");
+            }
         }
 
         return 0;
@@ -149,8 +181,7 @@ public sealed class OptimizeCommand
         // Fresh state per run
         var riskState = new InMemoryRiskState();
         var risk = new RiskManager(riskState, _riskOptions);
-        var calc = new IndicatorCalculator(_indicatorOptions);
-        var scanner = new TraidrScanner(calc, trial.Scanner);
+        var scanner = _scannerFactory.Create(trial.Strategy, trial.OliverScanner, trial.CameronScanner);
 
         var runOpt = new BacktestOptions
         {
@@ -170,7 +201,13 @@ public sealed class OptimizeCommand
         return BacktestSimulator.Run(data, runOpt, scanner, risk);
     }
 
-    private static TrialSettings SampleTrial(Random rng, OptimizeOptions opt)
+    static decimal? SampleTp(Random rng, IReadOnlyList<decimal?> values)
+    {
+        if (values.Count == 0) return null;
+        return values[rng.Next(0, values.Count)];
+    }
+
+    private static TrialSettings SampleOliverTrial(Random rng, OptimizeOptions opt)
     {
         // Scanner
         var lookback = rng.Next(opt.LookbackMin, opt.LookbackMax + 1);
@@ -213,13 +250,61 @@ public sealed class OptimizeCommand
             TakeProfitR = SampleTp(rng, opt.TpRValues)
         };
 
-        return new TrialSettings(scanner, backtest);
+        return new TrialSettings(
+            Strategy: TradingStrategy.Oliver,
+            OliverScanner: scanner,
+            CameronScanner: null,
+            Backtest: backtest);
+    }
 
-        static decimal? SampleTp(Random rng, IReadOnlyList<decimal?> values)
+    private static TrialSettings SampleCameronTrial(Random rng, OptimizeOptions opt)
+    {
+        decimal RandDecimal(decimal min, decimal max)
         {
-            if (values.Count == 0) return null;
-            return values[rng.Next(0, values.Count)];
+            var u = (decimal)rng.NextDouble();
+            return min + (u * (max - min));
         }
+
+        var scanner = new CameronRossScannerOptions
+        {
+            MinPrice = RandDecimal(opt.CamMinPriceMin, opt.CamMinPriceMax),
+            MaxPrice = RandDecimal(opt.CamMaxPriceMin, opt.CamMaxPriceMax),
+            MinGapPct = RandDecimal(opt.CamMinGapPctMin, opt.CamMinGapPctMax),
+            MinDayGainPct = RandDecimal(opt.CamMinDayGainPctMin, opt.CamMinDayGainPctMax),
+            RequireRvol = opt.CamRequireRvol,
+            RvolLookbackDays = rng.Next(opt.CamRvolLookbackMin, opt.CamRvolLookbackMax + 1),
+            MinRvol = RandDecimal(opt.CamMinRvolMin, opt.CamMinRvolMax),
+            RequireNews = opt.CamRequireNews,
+            RequireLowFloat = opt.CamRequireLowFloat,
+            MaxFloatShares = opt.CamMaxFloatShares,
+            RequireShortInterest = opt.CamRequireShortInterest,
+            MinShortInterestPct = opt.CamMinShortInterestPct,
+            AllowShorts = opt.CamAllowShorts,
+            StartTimeEt = opt.CamStartTimeEt,
+            EndTimeEt = opt.CamEndTimeEt,
+            RequireMicroPullback = opt.CamRequireMicroPullback,
+            PullbackBars = rng.Next(opt.CamPullbackBarsMin, opt.CamPullbackBarsMax + 1),
+            MaxPullbackPct = RandDecimal(opt.CamMaxPullbackPctMin, opt.CamMaxPullbackPctMax),
+            RequireRoundBreak = opt.CamRequireRoundBreak,
+            RoundIncrement = opt.CamRoundIncrement,
+            RoundBreakMaxDistance = RandDecimal(opt.CamRoundBreakMaxDistanceMin, opt.CamRoundBreakMaxDistanceMax),
+            UseFixedStopCents = opt.CamUseFixedStopCents,
+            StopCents = RandDecimal(opt.CamStopCentsMin, opt.CamStopCentsMax),
+            StopBufferPct = RandDecimal(opt.CamStopBufferPctMin, opt.CamStopBufferPctMax)
+        };
+
+        var backtest = new TrialBacktestSettings
+        {
+            MaxBarsToFillEntry = rng.Next(opt.FillBarsMin, opt.FillBarsMax + 1),
+            EntryLimitBufferPct = RandDecimal(opt.EntryBufferMin, opt.EntryBufferMax),
+            TakeProfitR = SampleTp(rng, opt.TpRValues)
+        };
+
+        return new TrialSettings(
+            Strategy: TradingStrategy.CameronRoss,
+            OliverScanner: null,
+            CameronScanner: scanner,
+            Backtest: backtest);
     }
 
     private static OptimizeMetrics ComputeMetrics(BacktestResult r, decimal startingEquity)
@@ -270,25 +355,40 @@ public sealed class OptimizeCommand
     {
         var sb = new StringBuilder();
         sb.AppendLine(
-            "trial,finalScore,trainScore,testScore," +
+            "trial,strategy,finalScore,trainScore,testScore," +
             "lookback,maxRangePct,minBodyToMedian,minVolToAvg,breakoutBuf,stopBuf," +
+            "camMinPrice,camMaxPrice,camMinGapPct,camMinDayGainPct,camMinRvol,camPullbackBars,camMaxPullbackPct,camStopCents,camRoundBreakDist," +
             "fillBars,entryBuf,tpR," +
             "trainFilled,trainAvgR,trainPF,trainDDPct,trainTotalPnl,trainWinRate," +
             "testFilled,testAvgR,testPF,testDDPct,testTotalPnl,testWinRate");
 
         foreach (var r in results)
         {
+            var oliver = r.OliverScanner;
+            var cam = r.CameronScanner;
+
             sb.Append(r.TrialIndex).Append(',')
+              .Append(r.Strategy).Append(',')
               .Append(r.FinalScore.ToString(CultureInfo.InvariantCulture)).Append(',')
               .Append(r.TrainScore.ToString(CultureInfo.InvariantCulture)).Append(',')
               .Append(r.TestScore.ToString(CultureInfo.InvariantCulture)).Append(',')
 
-              .Append(r.Scanner.ConsolidationLookbackBars).Append(',')
-              .Append(r.Scanner.MaxConsolidationRangePct.ToString(CultureInfo.InvariantCulture)).Append(',')
-              .Append(r.Scanner.MinBodyToMedianBody.ToString(CultureInfo.InvariantCulture)).Append(',')
-              .Append(r.Scanner.MinVolumeToAvgVolume.ToString(CultureInfo.InvariantCulture)).Append(',')
-              .Append(r.Scanner.BreakoutBufferPct.ToString(CultureInfo.InvariantCulture)).Append(',')
-              .Append(r.Scanner.StopBufferPct.ToString(CultureInfo.InvariantCulture)).Append(',')
+              .Append(oliver?.ConsolidationLookbackBars.ToString() ?? "").Append(',')
+              .Append(oliver?.MaxConsolidationRangePct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(oliver?.MinBodyToMedianBody.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(oliver?.MinVolumeToAvgVolume.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(oliver?.BreakoutBufferPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(oliver?.StopBufferPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+
+              .Append(cam?.MinPrice.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(cam?.MaxPrice.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(cam?.MinGapPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(cam?.MinDayGainPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(cam?.MinRvol.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(cam?.PullbackBars.ToString() ?? "").Append(',')
+              .Append(cam?.MaxPullbackPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(cam?.StopCents.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(cam?.RoundBreakMaxDistance.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
 
               .Append(r.Backtest.MaxBarsToFillEntry).Append(',')
               .Append(r.Backtest.EntryLimitBufferPct.ToString(CultureInfo.InvariantCulture)).Append(',')
@@ -348,6 +448,7 @@ public sealed class OptimizeCommand
         var timeframe = dict.TryGetValue("timeframe", out var tf) && !string.IsNullOrWhiteSpace(tf) ? tf : _cfg.GetValue<string>("Optimize:Timeframe") ?? "5Min";
 
         var minFilled = dict.TryGetValue("minFilledTrades", out var mft) && int.TryParse(mft, out var mf) ? Math.Max(1, mf) : _cfg.GetValue("Optimize:MinFilledTrades", 20);
+        var strategy = ParseStrategy(dict.TryGetValue("strategy", out var st) ? st : null);
 
         // Backtest execution defaults
         var flattenStr = _cfg.GetValue<string>("Optimize:FlattenTimeEt") ?? "15:50";
@@ -369,6 +470,7 @@ public sealed class OptimizeCommand
             TopN = topN,
             OutDir = outDir,
             MinFilledTrades = minFilled,
+            Strategy = strategy,
 
             FlattenTimeEt = flatten,
             SameBarRule = SameBarFillRule.ConservativeStopFirst,
@@ -424,6 +526,49 @@ public sealed class OptimizeCommand
         p.MinCloseInRangeForLong = _cfg.GetValue("Optimize:Fixed:MinCloseInRangeForLong", 0.0m);
         p.MaxCloseInRangeForShort = _cfg.GetValue("Optimize:Fixed:MaxCloseInRangeForShort", 1.0m);
 
+        // Cameron Ross ranges
+        p.CamMinPriceMin = _cfg.GetValue("Optimize:CameronRanges:MinPriceMin", 2.0m);
+        p.CamMinPriceMax = _cfg.GetValue("Optimize:CameronRanges:MinPriceMax", 5.0m);
+        p.CamMaxPriceMin = _cfg.GetValue("Optimize:CameronRanges:MaxPriceMin", 10.0m);
+        p.CamMaxPriceMax = _cfg.GetValue("Optimize:CameronRanges:MaxPriceMax", 20.0m);
+        p.CamMinGapPctMin = _cfg.GetValue("Optimize:CameronRanges:MinGapPctMin", 0.08m);
+        p.CamMinGapPctMax = _cfg.GetValue("Optimize:CameronRanges:MinGapPctMax", 0.25m);
+        p.CamMinDayGainPctMin = _cfg.GetValue("Optimize:CameronRanges:MinDayGainPctMin", 0.08m);
+        p.CamMinDayGainPctMax = _cfg.GetValue("Optimize:CameronRanges:MinDayGainPctMax", 0.30m);
+        p.CamMinRvolMin = _cfg.GetValue("Optimize:CameronRanges:MinRvolMin", 3.0m);
+        p.CamMinRvolMax = _cfg.GetValue("Optimize:CameronRanges:MinRvolMax", 10.0m);
+        p.CamRvolLookbackMin = _cfg.GetValue("Optimize:CameronRanges:RvolLookbackMin", 10);
+        p.CamRvolLookbackMax = _cfg.GetValue("Optimize:CameronRanges:RvolLookbackMax", 30);
+        p.CamPullbackBarsMin = _cfg.GetValue("Optimize:CameronRanges:PullbackBarsMin", 2);
+        p.CamPullbackBarsMax = _cfg.GetValue("Optimize:CameronRanges:PullbackBarsMax", 5);
+        p.CamMaxPullbackPctMin = _cfg.GetValue("Optimize:CameronRanges:MaxPullbackPctMin", 0.01m);
+        p.CamMaxPullbackPctMax = _cfg.GetValue("Optimize:CameronRanges:MaxPullbackPctMax", 0.05m);
+        p.CamStopCentsMin = _cfg.GetValue("Optimize:CameronRanges:StopCentsMin", 0.08m);
+        p.CamStopCentsMax = _cfg.GetValue("Optimize:CameronRanges:StopCentsMax", 0.20m);
+        p.CamStopBufferPctMin = _cfg.GetValue("Optimize:CameronRanges:StopBufferPctMin", 0.0m);
+        p.CamStopBufferPctMax = _cfg.GetValue("Optimize:CameronRanges:StopBufferPctMax", 0.002m);
+        p.CamRoundBreakMaxDistanceMin = _cfg.GetValue("Optimize:CameronRanges:RoundBreakMaxDistanceMin", 0.02m);
+        p.CamRoundBreakMaxDistanceMax = _cfg.GetValue("Optimize:CameronRanges:RoundBreakMaxDistanceMax", 0.08m);
+
+        // Cameron Ross fixed settings
+        p.CamRequireRvol = _cfg.GetValue("Optimize:CameronFixed:RequireRvol", true);
+        p.CamRequireNews = _cfg.GetValue("Optimize:CameronFixed:RequireNews", false);
+        p.CamRequireLowFloat = _cfg.GetValue("Optimize:CameronFixed:RequireLowFloat", false);
+        p.CamMaxFloatShares = _cfg.GetValue("Optimize:CameronFixed:MaxFloatShares", 20_000_000L);
+        p.CamRequireShortInterest = _cfg.GetValue("Optimize:CameronFixed:RequireShortInterest", false);
+        p.CamMinShortInterestPct = _cfg.GetValue("Optimize:CameronFixed:MinShortInterestPct", 0.0m);
+        p.CamAllowShorts = _cfg.GetValue("Optimize:CameronFixed:AllowShorts", false);
+        p.CamRequireMicroPullback = _cfg.GetValue("Optimize:CameronFixed:RequireMicroPullback", true);
+        p.CamRequireRoundBreak = _cfg.GetValue("Optimize:CameronFixed:RequireRoundBreak", false);
+        p.CamRoundIncrement = _cfg.GetValue("Optimize:CameronFixed:RoundIncrement", 0.5m);
+        p.CamUseFixedStopCents = _cfg.GetValue("Optimize:CameronFixed:UseFixedStopCents", true);
+        p.CamStartTimeEt = TimeSpan.Parse(
+            _cfg.GetValue<string>("Optimize:CameronFixed:StartTimeEt") ?? "07:00",
+            CultureInfo.InvariantCulture);
+        p.CamEndTimeEt = TimeSpan.Parse(
+            _cfg.GetValue<string>("Optimize:CameronFixed:EndTimeEt") ?? "10:30",
+            CultureInfo.InvariantCulture);
+
         return p;
 
         static IReadOnlyList<decimal?> ParseTpValues(string csv)
@@ -442,6 +587,15 @@ public sealed class OptimizeCommand
             return vals;
         }
     }
+
+    private TradingStrategy ParseStrategy(string? value)
+    {
+        var fallback = _cfg.GetValue<string>("Optimize:Strategy") ?? _cfg.GetValue<string>("Strategy:Default") ?? "Oliver";
+        var raw = string.IsNullOrWhiteSpace(value) ? fallback : value;
+        return Enum.TryParse<TradingStrategy>(raw, ignoreCase: true, out var strategy)
+            ? strategy
+            : TradingStrategy.Oliver;
+    }
 }
 
 public sealed record OptimizeOptions
@@ -452,6 +606,7 @@ public sealed record OptimizeOptions
     public required DateOnly TestFromEt { get; init; }
     public required DateOnly TestToEt { get; init; }
     public string Timeframe { get; init; } = "5Min";
+    public TradingStrategy Strategy { get; init; } = TradingStrategy.Oliver;
 
     public int Trials { get; init; } = 500;
     public int Seed { get; init; } = 12345;
@@ -510,9 +665,51 @@ public sealed record OptimizeOptions
     public decimal MinCloseInRangeForLong { get; set; }
     public decimal MaxCloseInRangeForShort { get; set; }
 
+    // Cameron Ross ranges
+    public decimal CamMinPriceMin { get; set; }
+    public decimal CamMinPriceMax { get; set; }
+    public decimal CamMaxPriceMin { get; set; }
+    public decimal CamMaxPriceMax { get; set; }
+    public decimal CamMinGapPctMin { get; set; }
+    public decimal CamMinGapPctMax { get; set; }
+    public decimal CamMinDayGainPctMin { get; set; }
+    public decimal CamMinDayGainPctMax { get; set; }
+    public decimal CamMinRvolMin { get; set; }
+    public decimal CamMinRvolMax { get; set; }
+    public int CamRvolLookbackMin { get; set; }
+    public int CamRvolLookbackMax { get; set; }
+    public int CamPullbackBarsMin { get; set; }
+    public int CamPullbackBarsMax { get; set; }
+    public decimal CamMaxPullbackPctMin { get; set; }
+    public decimal CamMaxPullbackPctMax { get; set; }
+    public decimal CamStopCentsMin { get; set; }
+    public decimal CamStopCentsMax { get; set; }
+    public decimal CamStopBufferPctMin { get; set; }
+    public decimal CamStopBufferPctMax { get; set; }
+    public decimal CamRoundBreakMaxDistanceMin { get; set; }
+    public decimal CamRoundBreakMaxDistanceMax { get; set; }
+
+    // Cameron Ross fixed settings
+    public bool CamRequireRvol { get; set; }
+    public bool CamRequireNews { get; set; }
+    public bool CamRequireLowFloat { get; set; }
+    public long CamMaxFloatShares { get; set; }
+    public bool CamRequireShortInterest { get; set; }
+    public decimal CamMinShortInterestPct { get; set; }
+    public bool CamAllowShorts { get; set; }
+    public bool CamRequireMicroPullback { get; set; }
+    public bool CamRequireRoundBreak { get; set; }
+    public decimal CamRoundIncrement { get; set; }
+    public bool CamUseFixedStopCents { get; set; }
+    public TimeSpan CamStartTimeEt { get; set; }
+    public TimeSpan CamEndTimeEt { get; set; }
 }
 
-public sealed record TrialSettings(TraidrScannerOptions Scanner, TrialBacktestSettings Backtest);
+public sealed record TrialSettings(
+    TradingStrategy Strategy,
+    TraidrScannerOptions? OliverScanner,
+    CameronRossScannerOptions? CameronScanner,
+    TrialBacktestSettings Backtest);
 
 public sealed record TrialBacktestSettings
 {
@@ -539,7 +736,9 @@ public sealed record OptimizeMetrics
 public sealed record OptimizeTrialResult
 {
     public int TrialIndex { get; init; }
-    public required TraidrScannerOptions Scanner { get; init; }
+    public TradingStrategy Strategy { get; init; }
+    public TraidrScannerOptions? OliverScanner { get; init; }
+    public CameronRossScannerOptions? CameronScanner { get; init; }
     public required TrialBacktestSettings Backtest { get; init; }
     public required OptimizeMetrics Train { get; init; }
     public required OptimizeMetrics Test { get; init; }

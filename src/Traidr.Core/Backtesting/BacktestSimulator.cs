@@ -13,7 +13,7 @@ public static class BacktestSimulator
     public static BacktestResult Run(
         BacktestDataSet data,
         BacktestOptions opt,
-        TraidrScanner scanner,
+        ISetupScanner scanner,
         IRiskManager risk,
         CancellationToken ct = default)
     {

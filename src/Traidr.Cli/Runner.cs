@@ -15,7 +15,7 @@ public sealed class Runner
     private readonly UniverseBuilder _universe;
     private readonly IUniversePreFilter _preFilter;
     private readonly IMarketDataClient _marketData;
-    private readonly TraidrScanner _scanner;
+    private readonly IStrategyScannerFactory _scannerFactory;
     private readonly ILlmScorer _llm;
     private readonly IRiskManager _risk;
     private readonly IOrderExecutor _executor;
@@ -26,7 +26,7 @@ public sealed class Runner
         UniverseBuilder universe,
         IUniversePreFilter preFilter,
         IMarketDataClient marketData,
-        TraidrScanner scanner,
+        IStrategyScannerFactory scannerFactory,
         ILlmScorer llm,
         IRiskManager risk,
         IOrderExecutor executor)
@@ -36,7 +36,7 @@ public sealed class Runner
         _universe = universe;
         _preFilter = preFilter;
         _marketData = marketData;
-        _scanner = scanner;
+        _scannerFactory = scannerFactory;
         _llm = llm;
         _risk = risk;
         _executor = executor;
@@ -48,6 +48,9 @@ public sealed class Runner
         var topGainers = _cfg.GetValue<int>("TopGainersCount");
         var timeframe = _cfg.GetValue<string>("Execution:Timeframe") ?? "5Min";
         var lookbackMinutes = _cfg.GetValue<int>("Execution:LookbackMinutes");
+        var strategy = ParseStrategy(
+            _cfg.GetValue<string>("Execution:Strategy")
+            ?? _cfg.GetValue<string>("Strategy:Default"));
 
         // 1) Universe
         var universe = await _universe.BuildUniverseAsync(watchlist, topGainers, ct);
@@ -75,10 +78,11 @@ public sealed class Runner
         _log.LogInformation("Fetched bars: {Count} across {Symbols} symbols", bars.Count, bars.Select(b => b.Symbol).Distinct(StringComparer.OrdinalIgnoreCase).Count());
 
         // 4) Scan for setups
-        var candidates = _scanner.Scan(bars);
+        var scanner = _scannerFactory.Create(strategy);
+        var candidates = scanner.Scan(bars);
         if (candidates.Count == 0)
         {
-            _log.LogPink("No Traidr setups found this run.");
+            _log.LogPink("No {Strategy} setups found this run.", strategy);
             return;
         }
 
@@ -132,5 +136,12 @@ public sealed class Runner
 
             await _executor.ExecuteAsync(intent, ct);
         }
+    }
+
+    private static TradingStrategy ParseStrategy(string? value)
+    {
+        return Enum.TryParse<TradingStrategy>(value ?? string.Empty, ignoreCase: true, out var strategy)
+            ? strategy
+            : TradingStrategy.Oliver;
     }
 }

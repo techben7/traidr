@@ -7,19 +7,17 @@ namespace Traidr.Core.Backtesting;
 public sealed class BacktestEngine
 {
     private readonly IMarketDataClient _marketData;
-    private readonly TraidrScanner _scanner;
     private readonly IRiskManager _risk;
     private readonly TimeZoneInfo _marketTz;
 
-    public BacktestEngine(IMarketDataClient marketData, TraidrScanner scanner, IRiskManager risk, string marketTimeZoneId = "America/New_York")
+    public BacktestEngine(IMarketDataClient marketData, IRiskManager risk, string marketTimeZoneId = "America/New_York")
     {
         _marketData = marketData;
-        _scanner = scanner;
         _risk = risk;
         _marketTz = TimeZoneInfo.FindSystemTimeZoneById(marketTimeZoneId);
     }
 
-    public async Task<BacktestResult> RunAsync(BacktestOptions opt, CancellationToken ct = default)
+    public async Task<BacktestResult> RunAsync(ISetupScanner scanner, BacktestOptions opt, CancellationToken ct = default)
     {
         if (opt.Symbols.Count == 0)
             return new BacktestResult(Array.Empty<BacktestTrade>(), new BacktestSummary(0, 0, 0, 0, 0m, 0m, 0m, 0m, 0m));
@@ -107,7 +105,7 @@ public sealed class BacktestEngine
 
             // No new entries if we already have any position in that symbol
             // Build scan input (all symbol windows that have at least some bars)
-            var candidates = _scanner.Scan(windows);
+            var candidates = scanner.Scan(windows);
             if (candidates.Count == 0)
                 continue;
 

@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traidr.Core.Backtesting;
+using Traidr.Core.Scanning;
 
 namespace Traidr.Cli;
 
@@ -10,20 +12,29 @@ public sealed class BacktestCommand
 {
     private readonly ILogger<BacktestCommand> _log;
     private readonly BacktestEngine _engine;
+    private readonly IStrategyScannerFactory _scannerFactory;
+    private readonly IConfiguration _cfg;
 
-    public BacktestCommand(ILogger<BacktestCommand> log, BacktestEngine engine)
+    public BacktestCommand(
+        ILogger<BacktestCommand> log,
+        BacktestEngine engine,
+        IStrategyScannerFactory scannerFactory,
+        IConfiguration cfg)
     {
         _log = log;
         _engine = engine;
+        _scannerFactory = scannerFactory;
+        _cfg = cfg;
     }
 
     public async Task<int> RunAsync(string[] args, CancellationToken ct = default)
     {
-        var opt = ParseArgs(args);
-        _log.LogInformation("Backtest symbols={Symbols} from={From} to={To} timeframe={Tf}",
-            string.Join(",", opt.Symbols), opt.FromDateEt, opt.ToDateEt, opt.Timeframe);
+        var (opt, strategy) = ParseArgs(args);
+        _log.LogInformation("Backtest strategy={Strategy} symbols={Symbols} from={From} to={To} timeframe={Tf}",
+            strategy, string.Join(",", opt.Symbols), opt.FromDateEt, opt.ToDateEt, opt.Timeframe);
 
-        var result = await _engine.RunAsync(opt, ct);
+        var scanner = _scannerFactory.Create(strategy);
+        var result = await _engine.RunAsync(scanner, opt, ct);
 
         Directory.CreateDirectory(_outDir);
 
@@ -51,7 +62,7 @@ public sealed class BacktestCommand
 
     private string _outDir = "_BacktestResults";
 
-    private BacktestOptions ParseArgs(string[] args)
+    private (BacktestOptions Options, TradingStrategy Strategy) ParseArgs(string[] args)
     {
         // args includes: ["backtest", ...]
         var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -77,6 +88,7 @@ public sealed class BacktestCommand
             _outDir = outDir;
 
         var timeframe = dict.TryGetValue("timeframe", out var tf) && !string.IsNullOrWhiteSpace(tf) ? tf : "5Min";
+        var strategy = ParseStrategy(dict.TryGetValue("strategy", out var st) ? st : null);
 
         var maxBarsToFill = dict.TryGetValue("maxFillBars", out var mb) && int.TryParse(mb, out var n) ? Math.Max(1, n) : 6;
 
@@ -109,7 +121,7 @@ public sealed class BacktestCommand
 
         var symbols = symCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
-        return new BacktestOptions
+        return (new BacktestOptions
         {
             Symbols = symbols,
             FromDateEt = fromDate,
@@ -122,7 +134,16 @@ public sealed class BacktestCommand
             SlippagePct = slippagePct,
             CommissionPerTrade = commission,
             TakeProfitR = tpR
-        };
+        }, strategy);
+    }
+
+    private TradingStrategy ParseStrategy(string? value)
+    {
+        var fallback = _cfg.GetValue<string>("Strategy:Default") ?? "Oliver";
+        var raw = string.IsNullOrWhiteSpace(value) ? fallback : value;
+        return Enum.TryParse<TradingStrategy>(raw, ignoreCase: true, out var strategy)
+            ? strategy
+            : TradingStrategy.Oliver;
     }
 
     private static string ToCsv(IReadOnlyList<BacktestTrade> trades)

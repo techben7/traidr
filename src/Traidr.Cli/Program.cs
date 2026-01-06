@@ -33,6 +33,7 @@ services.AddSingleton(configuration.GetSection("MarketData").Get<AlpacaOptions>(
 services.AddSingleton(configuration.GetSection("PreFilter").Get<PreFilterOptions>() ?? new PreFilterOptions());
 services.AddSingleton(configuration.GetSection("Indicators").Get<IndicatorCalculatorOptions>() ?? new IndicatorCalculatorOptions());
 services.AddSingleton(configuration.GetSection("TraidrScanner").Get<TraidrScannerOptions>() ?? new TraidrScannerOptions());
+services.AddSingleton(configuration.GetSection("CameronRossScanner").Get<CameronRossScannerOptions>() ?? new CameronRossScannerOptions());
 services.AddSingleton(configuration.GetSection("Llm").Get<LlmProxyOptions>() ?? new LlmProxyOptions());
 services.AddSingleton(configuration.GetSection("Risk").Get<RiskManagerOptions>() ?? new RiskManagerOptions());
 services.AddSingleton(configuration.GetSection("Webull").Get<WebullOpenApiOptions>() ?? new WebullOpenApiOptions());
@@ -49,7 +50,8 @@ services.AddSingleton<IMarketDataClient>(sp =>
 
 services.AddSingleton<IUniversePreFilter, UniversePreFilter>();
 services.AddSingleton(sp => new IndicatorCalculator(sp.GetRequiredService<IndicatorCalculatorOptions>()));
-services.AddSingleton(sp => new TraidrScanner(sp.GetRequiredService<IndicatorCalculator>(), sp.GetRequiredService<TraidrScannerOptions>()));
+services.AddSingleton<IMarketMetadataProvider, NullMarketMetadataProvider>();
+services.AddSingleton<IStrategyScannerFactory, StrategyScannerFactory>();
 services.AddSingleton<UniverseBuilder>();
 services.AddSingleton<BacktestEngine>();
 services.AddSingleton<IRiskState, InMemoryRiskState>();
