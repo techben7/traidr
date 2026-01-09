@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traidr.Core.Llm;
 using Traidr.Core.MarketData;
+using Traidr.Core.MarketData;
 using Traidr.Core.Scanning;
 using Traidr.Core.Trading;
 
@@ -51,6 +52,10 @@ public sealed class Runner
         var strategy = ParseStrategy(
             _cfg.GetValue<string>("Execution:Strategy")
             ?? _cfg.GetValue<string>("Strategy:Default"));
+        var sessionMode = ParseSessionMode(_cfg.GetValue<string>("Execution:SessionMode"));
+        var sessionHours = _cfg.GetSection("MarketSessions").Get<MarketSessionHours>() ?? new MarketSessionHours();
+        var extendedLookbackHours = _cfg.GetValue("Execution:ExtendedLookbackHours", 72);
+        var marketTz = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
 
         // 1) Universe
         var universe = await _universe.BuildUniverseAsync(watchlist, topGainers, ct);
@@ -70,8 +75,23 @@ public sealed class Runner
             return;
         }
 
-        var toUtc = DateTime.UtcNow;
-        var fromUtc = toUtc.AddMinutes(-Math.Max(30, lookbackMinutes));
+        var nowUtc = DateTime.UtcNow;
+        var effectiveMode = ResolveLiveSessionMode(nowUtc, marketTz, sessionMode, sessionHours);
+        if (effectiveMode is null)
+        {
+            _log.LogPink("Market session closed; skipping scan.");
+            return;
+        }
+
+        var toUtc = nowUtc;
+        var baseLookback = Math.Max(30, lookbackMinutes);
+        var fromUtc = toUtc.AddMinutes(-baseLookback);
+        if (effectiveMode is MarketSessionMode.PreMarket or MarketSessionMode.AfterHours)
+        {
+            var extendedMinutes = extendedLookbackHours * 60;
+            if (baseLookback < extendedMinutes)
+                fromUtc = toUtc.AddMinutes(-extendedMinutes);
+        }
 
         var bars = await _marketData.GetHistoricalBarsAsync(accepted, fromUtc, toUtc, timeframe, ct);
 
@@ -98,7 +118,7 @@ public sealed class Runner
         var scoreBySymbol = llmResp.Scores.ToDictionary(s => s.Symbol, StringComparer.OrdinalIgnoreCase);
 
         // 6) Risk + Execute
-        var nowUtc = DateTimeOffset.UtcNow;
+        var nowOffset = DateTimeOffset.UtcNow;
 
         foreach (var c in candidates)
         {
@@ -126,7 +146,7 @@ public sealed class Runner
                 }
             }
 
-            var decision = _risk.Evaluate(c with { EntryPrice = entry, StopPrice = stop }, takeProfit, nowUtc);
+            var decision = _risk.Evaluate(c with { EntryPrice = entry, StopPrice = stop }, takeProfit, nowOffset);
             if (decision.Decision == RiskDecisionType.Block)
             {
                 _log.LogInformation("RISK BLOCK: {Symbol} {Reason}", c.Symbol, decision.Reason);
@@ -155,5 +175,31 @@ public sealed class Runner
         return Enum.TryParse<TradingStrategy>(value ?? string.Empty, ignoreCase: true, out var strategy)
             ? strategy
             : TradingStrategy.Oliver;
+    }
+
+    private static MarketSessionMode ParseSessionMode(string? value)
+    {
+        return Enum.TryParse<MarketSessionMode>(value ?? string.Empty, ignoreCase: true, out var mode)
+            ? mode
+            : MarketSessionMode.Auto;
+    }
+
+    private static MarketSessionMode? ResolveLiveSessionMode(
+        DateTime nowUtc,
+        TimeZoneInfo marketTz,
+        MarketSessionMode mode,
+        MarketSessionHours hours)
+    {
+        if (mode != MarketSessionMode.Auto)
+            return mode;
+
+        var session = MarketSessionHelper.ResolveSession(nowUtc, marketTz, hours);
+        return session switch
+        {
+            MarketSession.PreMarket => MarketSessionMode.PreMarket,
+            MarketSession.Regular => MarketSessionMode.Regular,
+            MarketSession.AfterHours => MarketSessionMode.AfterHours,
+            _ => null
+        };
     }
 }

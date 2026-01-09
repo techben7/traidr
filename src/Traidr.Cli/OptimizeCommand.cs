@@ -37,8 +37,9 @@ public sealed class OptimizeCommand
         var opt = ParseArgs(args);
 
         _log.LogInformation(
-            "Optimize strategy={Strategy} trials={Trials} symbols={Symbols} train={TrainFrom}..{TrainTo} test={TestFrom}..{TestTo}",
+            "Optimize strategy={Strategy} session={Session} trials={Trials} symbols={Symbols} train={TrainFrom}..{TrainTo} test={TestFrom}..{TestTo}",
             opt.Strategy,
+            opt.SessionMode,
             opt.Trials,
             string.Join(',', opt.Symbols),
             opt.TrainFromEt, opt.TrainToEt,
@@ -221,6 +222,8 @@ public sealed class OptimizeCommand
             MaxBarsToFillEntry = trial.Backtest.MaxBarsToFillEntry,
             EntryLimitBufferPct = trial.Backtest.EntryLimitBufferPct,
             FlattenTimeEt = opt.FlattenTimeEt,
+            SessionMode = opt.SessionMode,
+            SessionHours = opt.SessionHours,
             SameBarRule = opt.SameBarRule,
             SlippagePct = opt.SlippagePct,
             CommissionPerTrade = opt.CommissionPerTrade,
@@ -319,6 +322,8 @@ public sealed class OptimizeCommand
             RoundIncrement = opt.CamRoundIncrement,
             RoundBreakMaxDistance = RandDecimal(opt.CamRoundBreakMaxDistanceMin, opt.CamRoundBreakMaxDistanceMax),
             UseFixedStopCents = opt.CamUseFixedStopCents,
+            EnableDailyHistoryFallback = opt.CamEnableDailyHistoryFallback,
+            DailyHistoryLookbackDays = opt.CamDailyHistoryLookbackDays,
             StopCents = RandDecimal(opt.CamStopCentsMin, opt.CamStopCentsMax),
             StopBufferPct = RandDecimal(opt.CamStopBufferPctMin, opt.CamStopBufferPctMax)
         };
@@ -549,6 +554,8 @@ public sealed class OptimizeCommand
 
         var minFilled = dict.TryGetValue("minFilledTrades", out var mft) && int.TryParse(mft, out var mf) ? Math.Max(1, mf) : _cfg.GetValue("Optimize:MinFilledTrades", 20);
         var strategy = ParseStrategy(dict.TryGetValue("strategy", out var st) ? st : null);
+        var sessionMode = ParseSessionMode(dict.TryGetValue("session", out var sm) ? sm : null);
+        var sessionHours = _cfg.GetSection("MarketSessions").Get<MarketSessionHours>() ?? new MarketSessionHours();
 
         // Backtest execution defaults
         var flattenStr = _cfg.GetValue<string>("Optimize:FlattenTimeEt") ?? "15:50";
@@ -571,6 +578,8 @@ public sealed class OptimizeCommand
             OutDir = outDir,
             MinFilledTrades = minFilled,
             Strategy = strategy,
+            SessionMode = sessionMode,
+            SessionHours = sessionHours,
 
             FlattenTimeEt = flatten,
             SameBarRule = SameBarFillRule.ConservativeStopFirst,
@@ -662,6 +671,8 @@ public sealed class OptimizeCommand
         p.CamRequireRoundBreak = _cfg.GetValue("Optimize:CameronFixed:RequireRoundBreak", false);
         p.CamRoundIncrement = _cfg.GetValue("Optimize:CameronFixed:RoundIncrement", 0.5m);
         p.CamUseFixedStopCents = _cfg.GetValue("Optimize:CameronFixed:UseFixedStopCents", true);
+        p.CamEnableDailyHistoryFallback = _cfg.GetValue("Optimize:CameronFixed:EnableDailyHistoryFallback", false);
+        p.CamDailyHistoryLookbackDays = _cfg.GetValue("Optimize:CameronFixed:DailyHistoryLookbackDays", 30);
         p.CamStartTimeEt = TimeSpan.Parse(
             _cfg.GetValue<string>("Optimize:CameronFixed:StartTimeEt") ?? "07:00",
             CultureInfo.InvariantCulture);
@@ -747,6 +758,17 @@ public sealed class OptimizeCommand
             ? strategy
             : TradingStrategy.Oliver;
     }
+
+    private MarketSessionMode ParseSessionMode(string? value)
+    {
+        var fallback = _cfg.GetValue<string>("Optimize:SessionMode")
+                       ?? _cfg.GetValue<string>("Execution:SessionMode")
+                       ?? "Auto";
+        var raw = string.IsNullOrWhiteSpace(value) ? fallback : value;
+        return Enum.TryParse<MarketSessionMode>(raw, ignoreCase: true, out var mode)
+            ? mode
+            : MarketSessionMode.Auto;
+    }
 }
 
 public sealed record OptimizeOptions
@@ -758,6 +780,8 @@ public sealed record OptimizeOptions
     public required DateOnly TestToEt { get; init; }
     public string Timeframe { get; init; } = "5Min";
     public TradingStrategy Strategy { get; init; } = TradingStrategy.Oliver;
+    public MarketSessionMode SessionMode { get; init; } = MarketSessionMode.Auto;
+    public MarketSessionHours SessionHours { get; init; } = new();
 
     public int Trials { get; init; } = 500;
     public int Seed { get; init; } = 12345;
@@ -852,6 +876,8 @@ public sealed record OptimizeOptions
     public bool CamRequireRoundBreak { get; set; }
     public decimal CamRoundIncrement { get; set; }
     public bool CamUseFixedStopCents { get; set; }
+    public bool CamEnableDailyHistoryFallback { get; set; }
+    public int CamDailyHistoryLookbackDays { get; set; }
     public TimeSpan CamStartTimeEt { get; set; }
     public TimeSpan CamEndTimeEt { get; set; }
 

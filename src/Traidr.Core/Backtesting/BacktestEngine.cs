@@ -103,6 +103,10 @@ public sealed class BacktestEngine
                 }
             }
 
+            var inSession = MarketSessionHelper.IsInSession(tUtc, _marketTz, opt.SessionMode, opt.SessionHours);
+            if (!inSession)
+                continue;
+
             // No new entries if we already have any position in that symbol
             // Build scan input (all symbol windows that have at least some bars)
             var candidates = scanner.Scan(windows);

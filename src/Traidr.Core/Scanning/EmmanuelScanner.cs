@@ -45,9 +45,10 @@ public sealed class EmmanuelScanner : ISetupScanner
 
         foreach (var (symbol, bars) in barsBySymbolOrdered)
         {
-            if (bars.Count < Math.Max(_opt.PoleLookbackBars + _opt.FlagBars + 2, 20))
+            var minBars = Math.Max(_opt.PoleLookbackBars + _opt.FlagBars + 2, 20);
+            if (bars.Count < minBars)
             {
-                LogSkip(symbol, "not enough bars");
+                LogSkip(symbol, $"not enough bars [{bars.Count} < {minBars}]");
                 continue;
             }
 
@@ -326,6 +327,7 @@ public sealed class EmmanuelScanner : ISetupScanner
         if (current != null) byDay.Add(current);
         if (byDay.Count < 2)
         {
+            _log.LogError($"byDay.Count:: [{byDay.Count}]");
             stats = default;
             return false;
         }
@@ -362,7 +364,7 @@ public sealed class EmmanuelScanner : ISetupScanner
 
     private void LogSkip(string symbol, string reason)
     {
-        _log.LogInformation("Emmanuel scan skip {Symbol}: {Reason}", symbol, reason);
+        _log.LogWarning("Emmanuel scan skip {Symbol}: {Reason}", symbol, reason);
     }
 
     private sealed record DayBar(DateTime Date, decimal Open, decimal Close, decimal Low, decimal High, long Volume);

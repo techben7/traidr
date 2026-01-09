@@ -10,6 +10,8 @@ public sealed record CameronRossScannerOptions
     public bool RequireRvol { get; init; } = true;
     public int RvolLookbackDays { get; init; } = 20;
     public decimal MinRvol { get; init; } = 5.0m;
+    public bool EnableDailyHistoryFallback { get; init; } = false;
+    public int DailyHistoryLookbackDays { get; init; } = 30;
 
     public bool RequireNews { get; init; } = false;
     public bool RequireLowFloat { get; init; } = false;

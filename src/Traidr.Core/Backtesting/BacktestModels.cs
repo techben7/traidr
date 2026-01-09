@@ -32,6 +32,8 @@ public sealed record BacktestOptions
 
     // Flatten any still-open position at or after this ET time.
     public TimeOnly FlattenTimeEt { get; init; } = new(15, 50);
+    public MarketSessionMode SessionMode { get; init; } = MarketSessionMode.Regular;
+    public MarketSessionHours SessionHours { get; init; } = new();
 
     public SameBarFillRule SameBarRule { get; init; } = SameBarFillRule.ConservativeStopFirst;
 

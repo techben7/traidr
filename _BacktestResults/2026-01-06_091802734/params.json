@@ -1,0 +1,26 @@
+{
+  "Symbols": [
+    "SOFI",
+    "RIVN",
+    "PLTR"
+  ],
+  "FromDateEt": "2025-06-01",
+  "ToDateEt": "2026-01-03",
+  "Timeframe": "5Min",
+  "MaxBarsToFillEntry": 6,
+  "EntryLimitBufferPct": 0,
+  "FlattenTimeEt": "15:50:00",
+  "SessionMode": 2,
+  "SessionHours": {
+    "PreMarketStartEt": "04:00:00",
+    "PreMarketEndEt": "09:30:00",
+    "RegularStartEt": "09:30:00",
+    "RegularEndEt": "16:00:00",
+    "AfterHoursStartEt": "16:00:00",
+    "AfterHoursEndEt": "20:00:00"
+  },
+  "SameBarRule": 0,
+  "SlippagePct": 0.0005,
+  "CommissionPerTrade": 0,
+  "TakeProfitR": null
+}

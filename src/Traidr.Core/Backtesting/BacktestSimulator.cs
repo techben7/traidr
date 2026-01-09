@@ -80,6 +80,10 @@ public static class BacktestSimulator
                 }
             }
 
+            var inSession = MarketSessionHelper.IsInSession(tUtc, data.MarketTimeZone, opt.SessionMode, opt.SessionHours);
+            if (!inSession)
+                continue;
+
             // Scan
             var candidates = scanner.Scan(windows);
             if (candidates.Count == 0)

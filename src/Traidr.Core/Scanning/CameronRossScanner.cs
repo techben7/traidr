@@ -10,6 +10,7 @@ public sealed class CameronRossScanner : ISetupScanner
     private readonly IndicatorCalculator _indicators;
     private readonly CameronRossScannerOptions _opt;
     private readonly IMarketMetadataProvider _meta;
+    private readonly IMarketDataClient? _marketData;
     private readonly ILogger _log;
     private readonly TimeZoneInfo _marketTz;
 
@@ -17,12 +18,14 @@ public sealed class CameronRossScanner : ISetupScanner
         IndicatorCalculator indicators,
         CameronRossScannerOptions opt,
         IMarketMetadataProvider meta,
+        IMarketDataClient? marketData = null,
         ILogger? log = null,
         string marketTimeZoneId = "America/New_York")
     {
         _indicators = indicators;
         _opt = opt;
         _meta = meta;
+        _marketData = marketData;
         _log = log ?? NullLogger.Instance;
         _marketTz = TimeZoneInfo.FindSystemTimeZoneById(marketTimeZoneId);
     }
@@ -45,9 +48,10 @@ public sealed class CameronRossScanner : ISetupScanner
 
         foreach (var (symbol, bars) in barsBySymbolOrdered)
         {
-            if (bars.Count < 10)
+            var minBarCount = 7; // 10
+            if (bars.Count < minBarCount)
             {
-                LogSkip(symbol, "not enough bars");
+                LogSkip(symbol, $"not enough bars {bars.Count} < {minBarCount}");
                 continue;
             }
 
@@ -279,27 +283,87 @@ public sealed class CameronRossScanner : ISetupScanner
         }
 
         if (current != null) byDay.Add(current);
-        if (byDay.Count < 2)
+        if (byDay.Count >= 2)
         {
-            stats = default;
+            var today = byDay[^1];
+            var prev = byDay[^2];
+
+            var gapPct = prev.Close > 0m ? (today.Open - prev.Close) / prev.Close : 0m;
+            var dayGainPct = prev.Close > 0m ? (today.Close - prev.Close) / prev.Close : 0m;
+
+            decimal? rvol = null;
+            if (_opt.RvolLookbackDays > 0)
+            {
+                var recent = byDay.Take(byDay.Count - 1).TakeLast(Math.Min(_opt.RvolLookbackDays, byDay.Count - 1)).ToList();
+                if (recent.Count > 0)
+                {
+                    var avg = recent.Average(d => (decimal)d.Volume);
+                    if (avg > 0m)
+                        rvol = today.Volume / avg;
+                }
+            }
+
+            stats = new DailyStats(gapPct, dayGainPct, rvol);
+            return true;
+        }
+
+        if (_opt.EnableDailyHistoryFallback && _marketData is not null)
+            return TryGetDailyStatsFromFallback(bars, out stats);
+
+        stats = default;
+        return false;
+    }
+
+    private bool TryGetDailyStatsFromFallback(List<Bar> bars, out DailyStats stats)
+    {
+        stats = default;
+
+        var symbol = bars[^1].Symbol;
+        var toUtc = DateTime.UtcNow;
+        var fromUtc = toUtc.AddDays(-Math.Max(5, _opt.DailyHistoryLookbackDays + 5));
+
+        IReadOnlyList<Bar> dailyBars;
+        try
+        {
+            dailyBars = _marketData!.GetHistoricalDailyBarsAsync(new[] { symbol }, fromUtc, toUtc)
+                .GetAwaiter().GetResult();
+        }
+        catch
+        {
             return false;
         }
 
-        var today = byDay[^1];
-        var prev = byDay[^2];
+        var daily = dailyBars.OrderBy(b => b.TimeUtc).ToList();
+        if (daily.Count == 0)
+            return false;
 
-        var gapPct = prev.Close > 0m ? (today.Open - prev.Close) / prev.Close : 0m;
-        var dayGainPct = prev.Close > 0m ? (today.Close - prev.Close) / prev.Close : 0m;
+        var prev = daily.Count >= 2 ? daily[^2] : daily[^1];
+        if (prev.Close <= 0m)
+            return false;
+
+        var todayBars = bars
+            .Where(b => TimeZoneInfo.ConvertTimeFromUtc(b.TimeUtc, _marketTz).Date ==
+                        TimeZoneInfo.ConvertTimeFromUtc(bars[^1].TimeUtc, _marketTz).Date)
+            .ToList();
+        if (todayBars.Count == 0)
+            return false;
+
+        var todayOpen = todayBars.First().Open;
+        var todayLast = todayBars.Last().Close;
+        var todayVol = todayBars.Sum(b => (decimal)b.Volume);
+
+        var gapPct = (todayOpen - prev.Close) / prev.Close;
+        var dayGainPct = (todayLast - prev.Close) / prev.Close;
 
         decimal? rvol = null;
         if (_opt.RvolLookbackDays > 0)
         {
-            var recent = byDay.Take(byDay.Count - 1).TakeLast(Math.Min(_opt.RvolLookbackDays, byDay.Count - 1)).ToList();
+            var recent = daily.Take(Math.Max(0, daily.Count - 1)).TakeLast(Math.Min(_opt.RvolLookbackDays, daily.Count - 1)).ToList();
             if (recent.Count > 0)
             {
                 var avg = recent.Average(d => (decimal)d.Volume);
                 if (avg > 0m)
-                    rvol = today.Volume / avg;
+                    rvol = todayVol / avg;
             }
         }
 
@@ -309,7 +373,7 @@ public sealed class CameronRossScanner : ISetupScanner
 
     private void LogSkip(string symbol, string reason)
     {
-        _log.LogInformation("CameronRoss scan skip {Symbol}: {Reason}", symbol, reason);
+        _log.LogWarning("CameronRoss scan skip {Symbol}: {Reason}", symbol, reason);
     }
 
     private sealed record DayBar(DateTime Date, decimal Open, decimal Close, decimal Low, decimal High, long Volume);

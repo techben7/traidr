@@ -21,6 +21,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
     private readonly CameronRossScannerOptions _cameronDefaults;
     private readonly EmmanuelScannerOptions _emmanuelDefaults;
     private readonly IMarketMetadataProvider _meta;
+    private readonly IMarketDataClient _marketData;
     private readonly ILoggerFactory _logs;
 
     public StrategyScannerFactory(
@@ -29,6 +30,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
         CameronRossScannerOptions cameronDefaults,
         EmmanuelScannerOptions emmanuelDefaults,
         IMarketMetadataProvider meta,
+        IMarketDataClient marketData,
         ILoggerFactory logs)
     {
         _indicators = indicators;
@@ -36,6 +38,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
         _cameronDefaults = cameronDefaults;
         _emmanuelDefaults = emmanuelDefaults;
         _meta = meta;
+        _marketData = marketData;
         _logs = logs;
     }
 
@@ -51,6 +54,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
                 _indicators,
                 cameron ?? _cameronDefaults,
                 _meta,
+                _marketData,
                 _logs.CreateLogger<CameronRossScanner>()),
             TradingStrategy.Emmanuel => new EmmanuelScanner(
                 _indicators,

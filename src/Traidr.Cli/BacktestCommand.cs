@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traidr.Core.Backtesting;
+using Traidr.Core.MarketData;
 using Traidr.Core.Scanning;
 
 namespace Traidr.Cli;
@@ -30,8 +31,8 @@ public sealed class BacktestCommand
     public async Task<int> RunAsync(string[] args, CancellationToken ct = default)
     {
         var (opt, strategy) = ParseArgs(args);
-        _log.LogInformation("Backtest strategy={Strategy} symbols={Symbols} from={From} to={To} timeframe={Tf}",
-            strategy, string.Join(",", opt.Symbols), opt.FromDateEt, opt.ToDateEt, opt.Timeframe);
+        _log.LogInformation("Backtest strategy={Strategy} session={Session} symbols={Symbols} from={From} to={To} timeframe={Tf}",
+            strategy, opt.SessionMode, string.Join(",", opt.Symbols), opt.FromDateEt, opt.ToDateEt, opt.Timeframe);
 
         var scanner = _scannerFactory.Create(strategy);
         var result = await _engine.RunAsync(scanner, opt, ct);
@@ -89,6 +90,8 @@ public sealed class BacktestCommand
 
         var timeframe = dict.TryGetValue("timeframe", out var tf) && !string.IsNullOrWhiteSpace(tf) ? tf : "5Min";
         var strategy = ParseStrategy(dict.TryGetValue("strategy", out var st) ? st : null);
+        var sessionMode = ParseSessionMode(dict.TryGetValue("session", out var sm) ? sm : null);
+        var sessionHours = _cfg.GetSection("MarketSessions").Get<MarketSessionHours>() ?? new MarketSessionHours();
 
         var maxBarsToFill = dict.TryGetValue("maxFillBars", out var mb) && int.TryParse(mb, out var n) ? Math.Max(1, n) : 6;
 
@@ -130,6 +133,8 @@ public sealed class BacktestCommand
             MaxBarsToFillEntry = maxBarsToFill,
             EntryLimitBufferPct = entryBufPct,
             FlattenTimeEt = flatten,
+            SessionMode = sessionMode,
+            SessionHours = sessionHours,
             SameBarRule = sameBarRule,
             SlippagePct = slippagePct,
             CommissionPerTrade = commission,
@@ -144,6 +149,17 @@ public sealed class BacktestCommand
         return Enum.TryParse<TradingStrategy>(raw, ignoreCase: true, out var strategy)
             ? strategy
             : TradingStrategy.Oliver;
+    }
+
+    private MarketSessionMode ParseSessionMode(string? value)
+    {
+        var fallback = _cfg.GetValue<string>("Backtest:SessionMode")
+                       ?? _cfg.GetValue<string>("Execution:SessionMode")
+                       ?? "Auto";
+        var raw = string.IsNullOrWhiteSpace(value) ? fallback : value;
+        return Enum.TryParse<MarketSessionMode>(raw, ignoreCase: true, out var mode)
+            ? mode
+            : MarketSessionMode.Auto;
     }
 
     private static string ToCsv(IReadOnlyList<BacktestTrade> trades)

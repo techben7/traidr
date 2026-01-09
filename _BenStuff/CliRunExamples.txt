@@ -1,5 +1,13 @@
 dotnet run --project src/Traidr.Cli 
 
+---------
+
+dotnet run --project src/Traidr.Cli --strategy CameronRoss
+
+dotnet run --project src/Traidr.Cli --strategy Emmanuel
+
+dotnet run --project src/Traidr.Cli --strategy Oliver
+
 ----------
 
 dotnet run --project src/Traidr.Cli -- backtest \
@@ -136,3 +144,21 @@ dotnet run --project src/Traidr.Cli -- backtest --strategy Emmanuel \
   --from 2025-06-01 --to 2026-01-03
 
 -------
+
+
+dotnet run --project src/Traidr.Cli -- optimize --session PreMarket --strategy CameronRoss \
+  --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --trainFrom 2025-06-01 --trainTo 2025-11-30 \
+  --testFrom 2025-12-01 --testTo 2026-01-03 --trials 50
+
+
+dotnet run --project src/Traidr.Cli -- optimize --session All --strategy CameronRoss \
+  --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --trainFrom 2025-06-01 --trainTo 2025-11-30 \
+  --testFrom 2025-12-01 --testTo 2026-01-03 --trials 50
+
+
+dotnet run --project src/Traidr.Cli -- backtest --session PreMarket --strategy CameronRoss \
+  --symbols SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --from 2025-06-01 --to 2026-01-03
+
