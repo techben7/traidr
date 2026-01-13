@@ -270,6 +270,7 @@ public sealed class TraidrScanner : ISetupScanner
                 Direction: dir.Value,
                 EntryPrice: entry,
                 StopPrice: stop,
+                TakeProfitPrice: null,
                 ConsolidationHigh: conHigh,
                 ConsolidationLow: conLow,
                 RangePct: rangePct,
@@ -289,6 +290,6 @@ public sealed class TraidrScanner : ISetupScanner
 
     private void LogSkip(string symbol, string reason)
     {
-        _log.LogWarning("Scan skip {Symbol}: {Reason}", symbol, reason);
+        //_log.LogWarning("Scan skip {Symbol}: {Reason}", symbol, reason);
     }
 }

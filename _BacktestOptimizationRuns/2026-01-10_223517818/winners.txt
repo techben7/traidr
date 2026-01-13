@@ -1,0 +1,135 @@
+"TrialIndex": 80,
+    "Strategy": 0,
+    "OliverScanner": {
+      "ConsolidationLookbackBars": 7,
+      "MaxConsolidationRangePct": 0.00267448052143421070,
+      "MinBodyToMedianBody": 1.31679120423122832,
+      "MinVolumeToAvgVolume": 2.1395515200866168,
+      "BreakoutBufferPct": 0.0005548187664499590,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.0002452754970850770
+    },
+    "CameronScanner": null,
+    "EmmanuelScanner": null,
+    "Backtest": {
+      "MaxBarsToFillEntry": 2,
+      "EntryLimitBufferPct": 0.0003937318159238115,
+      "TakeProfitR": 0.5
+    },
+    "Train": {
+      "Trades": 7,
+      "FilledTrades": 7,
+      "Wins": 5,
+      "Losses": 2,
+      "WinRate": 0.7142857142857142857142857143,
+      "TotalPnl": -76.697499578879455819483232500,
+      "AvgPnl": -10.956785654125636545640461786,
+      "AvgR": -0.2080951406813586081602826417,
+      "MaxDrawdown": 117.69132972813361146152914375,
+      "MaxDrawdownPct": 0.0047076531891253444584611658,
+      "ProfitFactor": 0.3604901545906151171619341555
+    },
+    "Test": {
+      "Trades": 12,
+      "FilledTrades": 12,
+      "Wins": 11,
+      "Losses": 1,
+      "WinRate": 0.9166666666666666666666666667,
+      "TotalPnl": 50.48362976892242010115936000,
+      "AvgPnl": 4.2069691474102016750966133333,
+      "AvgR": 0.074999059604011502410835251,
+      "MaxDrawdown": 20.46597542189456777649427500,
+      "MaxDrawdownPct": 0.000818639016875782711059771,
+      "ProfitFactor": 3.4667101727736302780076247332
+    },
+    "TrainScore": -641.97677746684725996883830271,
+    "TestScore": 302.95816287672616774159681054,
+    "FinalScore": -264.00280132941788888466425741
+
+    ------------
+
+
+dotnet run --project src/Traidr.Cli -- backtest --strategy Oliver \
+ --symbols SOXL,QBTS,TSLL,CRWV,APLD,SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+ --from 2025-09-01 \
+ --to 2026-01-08
+
+
+
+
+~~~~~~~~
+TODO: Ben - this one is looking pretty good...
+
+    "Execution": {
+      "Mode": "Paper",
+      "Timeframe": "5Min",
+      "LookbackMinutes": 120,
+      "Strategy": "Oliver",
+      "SessionMode": "All",
+      "TradeDirection": "Long",
+      "ExtendedLookbackHours": 72,
+      "Emmanuel": {
+        "TakeProfitR": 1.5
+      },
+      "RunLoop": false,
+      "LoopDelaySeconds": 60
+    },
+
+    "TraidrScanner": {
+      "Notes": "BKP1 Lots trades, more losses than wins but Pnl is positive, and very positive if only allowing Longs",
+      "ConsolidationLookbackBars": 14,
+      "MaxConsolidationRangePct": 0.0053752007239382790,
+      "MinBodyToMedianBody": 1.8968527978737150,
+      "MinVolumeToAvgVolume": 1.6183534762441904,
+      "BreakoutBufferPct": 0.00002081088489890610,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.0001348336022975080
+    },
+
+    "Risk": {
+      "AccountEquity": 25000,
+      "RiskPerTradePct": 0.004,
+      "MaxPositionNotional": 10000,
+      "MaxShares": 5000,
+      "MaxStopDistancePct": 0.015,
+      "MinStopDistancePct": 0.001,
+      "MinRewardToRiskR": 1.1,
+      "MaxTradesPerDay": 10,
+      "MaxDailyLossPct": 0.01,
+      "SymbolCooldown": "00:30:00",
+      "SlippagePct": 0.0005
+    },
+
+        dotnet run --project src/Traidr.Cli -- backtest --strategy Oliver --TradeDirection Long \
+        --symbols SIDU,SOXL,QBTS,TSLL,CRWV,APLD,SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+        --from 2025-06-01 \
+        --to 2026-01-08
+
+          [INFO] [23:58:13.598] Backtest complete. Trades=54 Wins=14 Losses=18 NoFills=22 TotalPnL=426.19910692998195351694974000
+          [INFO] [23:58:13.598] Outputs: _BacktestResults/2026-01-10_235813560/trades.csv | _BacktestResults/2026-01-10_235813560/summary.json
+
+        

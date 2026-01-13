@@ -171,6 +171,7 @@ public sealed class CameronRossScanner : ISetupScanner
                 Direction: direction,
                 EntryPrice: entry,
                 StopPrice: stop,
+                TakeProfitPrice: null,
                 ConsolidationHigh: entry,
                 ConsolidationLow: stop,
                 RangePct: pullbackPct,

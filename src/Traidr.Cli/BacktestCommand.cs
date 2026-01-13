@@ -15,22 +15,31 @@ public sealed class BacktestCommand
     private readonly BacktestEngine _engine;
     private readonly IStrategyScannerFactory _scannerFactory;
     private readonly IConfiguration _cfg;
+    private readonly AutoUniverseSelector _autoUniverse;
 
     public BacktestCommand(
         ILogger<BacktestCommand> log,
         BacktestEngine engine,
         IStrategyScannerFactory scannerFactory,
-        IConfiguration cfg)
+        IConfiguration cfg,
+        AutoUniverseSelector autoUniverse)
     {
         _log = log;
         _engine = engine;
         _scannerFactory = scannerFactory;
         _cfg = cfg;
+        _autoUniverse = autoUniverse;
     }
 
     public async Task<int> RunAsync(string[] args, CancellationToken ct = default)
     {
         var (opt, strategy) = ParseArgs(args);
+        if (opt.Symbols.Count == 0)
+        {
+            var autoSymbols = await _autoUniverse.GetSymbolsAsync(ct);
+            opt = opt with { Symbols = autoSymbols };
+        }
+
         _log.LogInformation("Backtest strategy={Strategy} session={Session} symbols={Symbols} from={From} to={To} timeframe={Tf}",
             strategy, opt.SessionMode, string.Join(",", opt.Symbols), opt.FromDateEt, opt.ToDateEt, opt.Timeframe);
 
@@ -76,8 +85,7 @@ public sealed class BacktestCommand
             dict[key] = val;
         }
 
-        if (!dict.TryGetValue("symbols", out var symCsv) || string.IsNullOrWhiteSpace(symCsv))
-            throw new ArgumentException("Backtest requires --symbols (comma-separated). Example: --symbols SOXL,QBTS,PATH");
+        dict.TryGetValue("symbols", out var symCsv);
 
         if (!dict.TryGetValue("from", out var fromStr) || !DateOnly.TryParse(fromStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDate))
             throw new ArgumentException("Backtest requires --from YYYY-MM-DD");
@@ -92,6 +100,14 @@ public sealed class BacktestCommand
         var strategy = ParseStrategy(dict.TryGetValue("strategy", out var st) ? st : null);
         var sessionMode = ParseSessionMode(dict.TryGetValue("session", out var sm) ? sm : null);
         var sessionHours = _cfg.GetSection("MarketSessions").Get<MarketSessionHours>() ?? new MarketSessionHours();
+
+        var execDirection = TradeDirectionParser.Parse(_cfg.GetValue<string>("Execution:TradeDirection"));
+        var backtestDirection = _cfg.GetValue<string>("Backtest:TradeDirection");
+        var argDirection =
+            dict.TryGetValue("tradeDirection", out var tdLong)
+                ? tdLong
+                : (dict.TryGetValue("direction", out var tdShort) ? tdShort : null);
+        var tradeDirection = TradeDirectionParser.Parse(argDirection ?? backtestDirection, execDirection);
 
         var maxBarsToFill = dict.TryGetValue("maxFillBars", out var mb) && int.TryParse(mb, out var n) ? Math.Max(1, n) : 6;
 
@@ -122,7 +138,9 @@ public sealed class BacktestCommand
         if (dict.TryGetValue("tpR", out var tpr) && decimal.TryParse(tpr, NumberStyles.Number, CultureInfo.InvariantCulture, out var tr))
             tpR = tr;
 
-        var symbols = symCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var symbols = string.IsNullOrWhiteSpace(symCsv)
+            ? new List<string>()
+            : symCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         return (new BacktestOptions
         {
@@ -138,6 +156,7 @@ public sealed class BacktestCommand
             SameBarRule = sameBarRule,
             SlippagePct = slippagePct,
             CommissionPerTrade = commission,
+            TradeDirection = tradeDirection,
             TakeProfitR = tpR
         }, strategy);
     }

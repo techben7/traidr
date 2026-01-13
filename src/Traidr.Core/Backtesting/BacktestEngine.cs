@@ -109,7 +109,7 @@ public sealed class BacktestEngine
 
             // No new entries if we already have any position in that symbol
             // Build scan input (all symbol windows that have at least some bars)
-            var candidates = scanner.Scan(windows);
+            var candidates = opt.TradeDirection.Filter(scanner.Scan(windows));
             if (candidates.Count == 0)
                 continue;
 
@@ -125,7 +125,7 @@ public sealed class BacktestEngine
                     continue;
 
                 var qty = riskDecision.Quantity!.Value;
-                var tpPrice = ComputeTakeProfit(c.EntryPrice, c.StopPrice, c.Direction, opt.TakeProfitR);
+                var tpPrice = c.TakeProfitPrice ?? ComputeTakeProfit(c.EntryPrice, c.StopPrice, c.Direction, opt.TakeProfitR);
 
                 var limit = ApplyEntryLimitBuffer(c.EntryPrice, c.Direction, opt.EntryLimitBufferPct);
                 // Create a virtual intent and simulate entry fill over the next N bars.
@@ -140,7 +140,7 @@ public sealed class BacktestEngine
                         SignalTimeUtc = tUtc,
                         EntryLimit = limit,
                         StopPrice = c.StopPrice,
-                        TakeProfitPrice = null,
+                        TakeProfitPrice = tpPrice,
                         Outcome = BacktestTradeOutcome.NoFill,
                         PnlDollars = 0m,
                         RMultiple = 0m,

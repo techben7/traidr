@@ -198,6 +198,7 @@ public sealed class EmmanuelScanner : ISetupScanner
                 Direction: BreakoutDirection.Long,
                 EntryPrice: entry,
                 StopPrice: stop,
+                TakeProfitPrice: null,
                 ConsolidationHigh: triggerHigh,
                 ConsolidationLow: flagLow,
                 RangePct: flagRetrace,

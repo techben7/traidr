@@ -4,5 +4,6 @@ public enum TradingStrategy
 {
     Oliver,
     CameronRoss,
-    Emmanuel
+    Emmanuel,
+    ReversalUp
 }

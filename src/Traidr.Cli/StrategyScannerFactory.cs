@@ -11,7 +11,8 @@ public interface IStrategyScannerFactory
         TradingStrategy strategy,
         TraidrScannerOptions? oliver = null,
         CameronRossScannerOptions? cameron = null,
-        EmmanuelScannerOptions? emmanuel = null);
+        EmmanuelScannerOptions? emmanuel = null,
+        ReversalUpScannerOptions? reversalUp = null);
 }
 
 public sealed class StrategyScannerFactory : IStrategyScannerFactory
@@ -20,6 +21,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
     private readonly TraidrScannerOptions _oliverDefaults;
     private readonly CameronRossScannerOptions _cameronDefaults;
     private readonly EmmanuelScannerOptions _emmanuelDefaults;
+    private readonly ReversalUpScannerOptions _reversalUpDefaults;
     private readonly IMarketMetadataProvider _meta;
     private readonly IMarketDataClient _marketData;
     private readonly ILoggerFactory _logs;
@@ -29,6 +31,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
         TraidrScannerOptions oliverDefaults,
         CameronRossScannerOptions cameronDefaults,
         EmmanuelScannerOptions emmanuelDefaults,
+        ReversalUpScannerOptions reversalUpDefaults,
         IMarketMetadataProvider meta,
         IMarketDataClient marketData,
         ILoggerFactory logs)
@@ -37,6 +40,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
         _oliverDefaults = oliverDefaults;
         _cameronDefaults = cameronDefaults;
         _emmanuelDefaults = emmanuelDefaults;
+        _reversalUpDefaults = reversalUpDefaults;
         _meta = meta;
         _marketData = marketData;
         _logs = logs;
@@ -46,7 +50,8 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
         TradingStrategy strategy,
         TraidrScannerOptions? oliver = null,
         CameronRossScannerOptions? cameron = null,
-        EmmanuelScannerOptions? emmanuel = null)
+        EmmanuelScannerOptions? emmanuel = null,
+        ReversalUpScannerOptions? reversalUp = null)
     {
         return strategy switch
         {
@@ -61,6 +66,10 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
                 emmanuel ?? _emmanuelDefaults,
                 _meta,
                 _logs.CreateLogger<EmmanuelScanner>()),
+            TradingStrategy.ReversalUp => new ReversalUpScanner(
+                _indicators,
+                reversalUp ?? _reversalUpDefaults,
+                _logs.CreateLogger<ReversalUpScanner>()),
             _ => new TraidrScanner(
                 _indicators,
                 oliver ?? _oliverDefaults,

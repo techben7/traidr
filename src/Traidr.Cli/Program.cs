@@ -35,10 +35,13 @@ services.AddSingleton(configuration.GetSection("Indicators").Get<IndicatorCalcul
 services.AddSingleton(configuration.GetSection("TraidrScanner").Get<TraidrScannerOptions>() ?? new TraidrScannerOptions());
 services.AddSingleton(configuration.GetSection("CameronRossScanner").Get<CameronRossScannerOptions>() ?? new CameronRossScannerOptions());
 services.AddSingleton(configuration.GetSection("EmmanuelScanner").Get<EmmanuelScannerOptions>() ?? new EmmanuelScannerOptions());
+services.AddSingleton(configuration.GetSection("ReversalUpScanner").Get<ReversalUpScannerOptions>() ?? new ReversalUpScannerOptions());
+services.AddSingleton(configuration.GetSection("AutoUniverse").Get<AutoUniverseOptions>() ?? new AutoUniverseOptions());
 services.AddSingleton(configuration.GetSection("Llm").Get<LlmProxyOptions>() ?? new LlmProxyOptions());
 services.AddSingleton(configuration.GetSection("Risk").Get<RiskManagerOptions>() ?? new RiskManagerOptions());
 services.AddSingleton(configuration.GetSection("Webull").Get<WebullOpenApiOptions>() ?? new WebullOpenApiOptions());
 services.AddSingleton(configuration.GetSection("WebullExecution").Get<WebullExecutionOptions>() ?? new WebullExecutionOptions());
+services.AddSingleton(configuration.GetSection("FinancialModelingPrep").Get<FmpOptions>() ?? new FmpOptions());
 
 // Core services
 services.AddSingleton<IMarketDataClient>(sp =>
@@ -51,8 +54,16 @@ services.AddSingleton<IMarketDataClient>(sp =>
 
 services.AddSingleton<IUniversePreFilter, UniversePreFilter>();
 services.AddSingleton(sp => new IndicatorCalculator(sp.GetRequiredService<IndicatorCalculatorOptions>()));
-services.AddSingleton<IMarketMetadataProvider, NullMarketMetadataProvider>();
+services.AddSingleton<FinancialModelingPrepClient>(sp =>
+{
+    var opt = sp.GetRequiredService<FmpOptions>();
+    var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var http = httpFactory.CreateClient("fmp");
+    return new FinancialModelingPrepClient(http, opt);
+});
+services.AddSingleton<IMarketMetadataProvider, FmpMarketMetadataProvider>();
 services.AddSingleton<IStrategyScannerFactory, StrategyScannerFactory>();
+services.AddSingleton<AutoUniverseSelector>();
 services.AddSingleton<UniverseBuilder>();
 services.AddSingleton<BacktestEngine>();
 services.AddSingleton<IRiskState, InMemoryRiskState>();

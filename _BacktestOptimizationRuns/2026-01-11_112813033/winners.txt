@@ -1,0 +1,56 @@
+{
+    "TrialIndex": 360,
+    "Strategy": 3,
+    "OliverScanner": null,
+    "CameronScanner": null,
+    "EmmanuelScanner": null,
+    "ReversalUpScanner": {
+      "SidewaysLookbackBars": 45,
+      "MaxSidewaysRangePct": 0.04641344283540430,
+      "PivotLookbackBars": 2,
+      "MinSwingCount": 6,
+      "MaxBarsAfterSwingLow": 5,
+      "MinGreenBodyToMedian": 1.3038773962314602,
+      "MinLowerWickPct": 0.3379895163876887,
+      "EntryBufferPct": 0.00147736900741112,
+      "StopBufferPct": 0.001172982807351735,
+      "MinBullRunPct": 0.02131156115388105,
+      "TakeProfitBullRunPct": 0.7959050756860082
+    },
+    "Backtest": {
+      "MaxBarsToFillEntry": 18,
+      "EntryLimitBufferPct": 0.0005611132681654365,
+      "TakeProfitR": null
+    },
+    "Train": {
+      "Trades": 7,
+      "FilledTrades": 7,
+      "Wins": 5,
+      "Losses": 2,
+      "WinRate": 0.7142857142857142857142857143,
+      "TotalPnl": 456.01214042124159502337379352,
+      "AvgPnl": 65.144591488748799289053399074,
+      "AvgR": 0.8722445095939045426044325291,
+      "MaxDrawdown": 99.06297608890786088866668391,
+      "MaxDrawdownPct": 0.0039625190435563144355466674,
+      "ProfitFactor": 3.7416560172075097402654053433
+    },
+    "Test": {
+      "Trades": 1,
+      "FilledTrades": 1,
+      "Wins": 1,
+      "Losses": 0,
+      "WinRate": 1,
+      "TotalPnl": 123.69418771928849077543521326,
+      "AvgPnl": 123.69418771928849077543521326,
+      "AvgR": 1.1755950627430543158752694353,
+      "MaxDrawdown": 0,
+      "MaxDrawdownPct": 0,
+      "ProfitFactor": 999
+    },
+    "TrainScore": 3837.6846000379692954173637201,
+    "TestScore": 16415.963079958018461134722820,
+    "FinalScore": 7868.995992005988961704307360
+  },
+
+  

@@ -85,7 +85,7 @@ public static class BacktestSimulator
                 continue;
 
             // Scan
-            var candidates = scanner.Scan(windows);
+            var candidates = opt.TradeDirection.Filter(scanner.Scan(windows));
             if (candidates.Count == 0)
                 continue;
 
@@ -100,7 +100,7 @@ public static class BacktestSimulator
                     continue;
 
                 var qty = riskDecision.Quantity!.Value;
-                var tpPrice = ComputeTakeProfit(c.EntryPrice, c.StopPrice, c.Direction, opt.TakeProfitR);
+                var tpPrice = c.TakeProfitPrice ?? ComputeTakeProfit(c.EntryPrice, c.StopPrice, c.Direction, opt.TakeProfitR);
                 var limit = ApplyEntryLimitBuffer(c.EntryPrice, c.Direction, opt.EntryLimitBufferPct);
 
                 if (!data.BarsBySymbol.TryGetValue(c.Symbol, out var series))
@@ -117,7 +117,7 @@ public static class BacktestSimulator
                         SignalTimeUtc = tUtc,
                         EntryLimit = limit,
                         StopPrice = c.StopPrice,
-                        TakeProfitPrice = null,
+                        TakeProfitPrice = tpPrice,
                         Outcome = BacktestTradeOutcome.NoFill,
                         PnlDollars = 0m,
                         RMultiple = 0m,

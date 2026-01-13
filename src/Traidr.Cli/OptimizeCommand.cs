@@ -17,24 +17,32 @@ public sealed class OptimizeCommand
     private readonly IMarketDataClient _marketData;
     private readonly RiskManagerOptions _riskOptions;
     private readonly IStrategyScannerFactory _scannerFactory;
+    private readonly AutoUniverseSelector _autoUniverse;
 
     public OptimizeCommand(
         ILogger<OptimizeCommand> log,
         IConfiguration cfg,
         IMarketDataClient marketData,
         RiskManagerOptions riskOptions,
-        IStrategyScannerFactory scannerFactory)
+        IStrategyScannerFactory scannerFactory,
+        AutoUniverseSelector autoUniverse)
     {
         _log = log;
         _cfg = cfg;
         _marketData = marketData;
         _riskOptions = riskOptions;
         _scannerFactory = scannerFactory;
+        _autoUniverse = autoUniverse;
     }
 
     public async Task<int> RunAsync(string[] args, CancellationToken ct = default)
     {
         var opt = ParseArgs(args);
+        if (opt.Symbols.Count == 0)
+        {
+            var autoSymbols = await _autoUniverse.GetSymbolsAsync(ct);
+            opt = opt with { Symbols = autoSymbols };
+        }
 
         _log.LogInformation(
             "Optimize strategy={Strategy} session={Session} trials={Trials} symbols={Symbols} train={TrainFrom}..{TrainTo} test={TestFrom}..{TestTo}",
@@ -66,6 +74,7 @@ public sealed class OptimizeCommand
             {
                 TradingStrategy.CameronRoss => SampleCameronTrial(rng, opt),
                 TradingStrategy.Emmanuel => SampleEmmanuelTrial(rng, opt),
+                TradingStrategy.ReversalUp => SampleReversalUpTrial(rng, opt),
                 _ => SampleOliverTrial(rng, opt)
             };
 
@@ -97,6 +106,7 @@ public sealed class OptimizeCommand
                 OliverScanner = trial.OliverScanner,
                 CameronScanner = trial.CameronScanner,
                 EmmanuelScanner = trial.EmmanuelScanner,
+                ReversalUpScanner = trial.ReversalUpScanner,
                 Backtest = trial.Backtest,
                 Train = trainMetrics,
                 Test = testMetrics,
@@ -180,6 +190,32 @@ public sealed class OptimizeCommand
                 continue;
             }
 
+            if (r.Strategy == TradingStrategy.ReversalUp && r.ReversalUpScanner is not null)
+            {
+                var s = r.ReversalUpScanner;
+                _log.LogPink(
+                    "#{Idx} score={Score:F2} trainR={TrainR:F3} trainPF={TrainPF:F2} trainDD={TrainDD:P2} testR={TestR:F3} testPF={TestPF:F2} testDD={TestDD:P2} | lookback={Look} rangePct={Range:P2} pivot={Pivot} swings={Swings} greenBody={Body:F2} wick={Wick:P0} stopBuf={Stop:P2} tpPct={Tp:P0} fillBars={FillBars} entryBuf={EntryBuf:P2}",
+                    r.TrialIndex,
+                    r.FinalScore,
+                    r.Train.AvgR,
+                    r.Train.ProfitFactor,
+                    r.Train.MaxDrawdownPct,
+                    r.Test.AvgR,
+                    r.Test.ProfitFactor,
+                    r.Test.MaxDrawdownPct,
+                    s.SidewaysLookbackBars,
+                    s.MaxSidewaysRangePct,
+                    s.PivotLookbackBars,
+                    s.MinSwingCount,
+                    s.MinGreenBodyToMedian,
+                    s.MinLowerWickPct,
+                    s.StopBufferPct,
+                    s.TakeProfitBullRunPct,
+                    r.Backtest.MaxBarsToFillEntry,
+                    r.Backtest.EntryLimitBufferPct);
+                continue;
+            }
+
             if (r.OliverScanner is not null)
             {
                 var s = r.OliverScanner;
@@ -211,7 +247,7 @@ public sealed class OptimizeCommand
         // Fresh state per run
         var riskState = new InMemoryRiskState();
         var risk = new RiskManager(riskState, _riskOptions);
-        var scanner = _scannerFactory.Create(trial.Strategy, trial.OliverScanner, trial.CameronScanner, trial.EmmanuelScanner);
+        var scanner = _scannerFactory.Create(trial.Strategy, trial.OliverScanner, trial.CameronScanner, trial.EmmanuelScanner, trial.ReversalUpScanner);
 
         var runOpt = new BacktestOptions
         {
@@ -227,6 +263,7 @@ public sealed class OptimizeCommand
             SameBarRule = opt.SameBarRule,
             SlippagePct = opt.SlippagePct,
             CommissionPerTrade = opt.CommissionPerTrade,
+            TradeDirection = opt.TradeDirection,
             TakeProfitR = trial.Backtest.TakeProfitR
         };
 
@@ -287,6 +324,7 @@ public sealed class OptimizeCommand
             OliverScanner: scanner,
             CameronScanner: null,
             EmmanuelScanner: null,
+            ReversalUpScanner: null,
             Backtest: backtest);
     }
 
@@ -340,6 +378,7 @@ public sealed class OptimizeCommand
             OliverScanner: null,
             CameronScanner: scanner,
             EmmanuelScanner: null,
+            ReversalUpScanner: null,
             Backtest: backtest);
     }
 
@@ -395,6 +434,46 @@ public sealed class OptimizeCommand
             OliverScanner: null,
             CameronScanner: null,
             EmmanuelScanner: scanner,
+            ReversalUpScanner: null,
+            Backtest: backtest);
+    }
+
+    private static TrialSettings SampleReversalUpTrial(Random rng, OptimizeOptions opt)
+    {
+        decimal RandDecimal(decimal min, decimal max)
+        {
+            var u = (decimal)rng.NextDouble();
+            return min + (u * (max - min));
+        }
+
+        var scanner = new ReversalUpScannerOptions
+        {
+            SidewaysLookbackBars = rng.Next(opt.RevSidewaysLookbackMin, opt.RevSidewaysLookbackMax + 1),
+            MaxSidewaysRangePct = RandDecimal(opt.RevMaxSidewaysRangePctMin, opt.RevMaxSidewaysRangePctMax),
+            PivotLookbackBars = rng.Next(opt.RevPivotLookbackMin, opt.RevPivotLookbackMax + 1),
+            MinSwingCount = rng.Next(opt.RevMinSwingCountMin, opt.RevMinSwingCountMax + 1),
+            MaxBarsAfterSwingLow = rng.Next(opt.RevMaxBarsAfterLowMin, opt.RevMaxBarsAfterLowMax + 1),
+            MinGreenBodyToMedian = RandDecimal(opt.RevMinGreenBodyToMedianMin, opt.RevMinGreenBodyToMedianMax),
+            MinLowerWickPct = RandDecimal(opt.RevMinLowerWickPctMin, opt.RevMinLowerWickPctMax),
+            EntryBufferPct = RandDecimal(opt.RevEntryBufferPctMin, opt.RevEntryBufferPctMax),
+            StopBufferPct = RandDecimal(opt.RevStopBufferPctMin, opt.RevStopBufferPctMax),
+            MinBullRunPct = RandDecimal(opt.RevMinBullRunPctMin, opt.RevMinBullRunPctMax),
+            TakeProfitBullRunPct = RandDecimal(opt.RevTakeProfitBullRunPctMin, opt.RevTakeProfitBullRunPctMax)
+        };
+
+        var backtest = new TrialBacktestSettings
+        {
+            MaxBarsToFillEntry = rng.Next(opt.FillBarsMin, opt.FillBarsMax + 1),
+            EntryLimitBufferPct = RandDecimal(opt.EntryBufferMin, opt.EntryBufferMax),
+            TakeProfitR = null
+        };
+
+        return new TrialSettings(
+            Strategy: TradingStrategy.ReversalUp,
+            OliverScanner: null,
+            CameronScanner: null,
+            EmmanuelScanner: null,
+            ReversalUpScanner: scanner,
             Backtest: backtest);
     }
 
@@ -430,7 +509,9 @@ public sealed class OptimizeCommand
         // - AvgR is scaled to be "human readable"
         // - ProfitFactor tends to be noisy with few trades, so MinFilledTrades gate helps.
         var winRateAdj = m.WinRate - opt.MinWinRate;
-        var score = (m.AvgR * opt.WeightAvgR)
+        var score = (m.TotalPnl * opt.WeightTotalPnl)
+                    + (m.AvgPnl * opt.WeightAvgPnl)
+                    + (m.AvgR * opt.WeightAvgR)
                     + (m.ProfitFactor * opt.WeightProfitFactor)
                     + (winRateAdj * opt.WeightWinRate)
                     - (m.MaxDrawdownPct * opt.WeightMaxDrawdownPct);
@@ -450,6 +531,7 @@ public sealed class OptimizeCommand
             "lookback,maxRangePct,minBodyToMedian,minVolToAvg,breakoutBuf,stopBuf," +
             "camMinPrice,camMaxPrice,camMinGapPct,camMinDayGainPct,camMinRvol,camPullbackBars,camMaxPullbackPct,camStopCents,camRoundBreakDist," +
             "emMinPrice,emMaxPrice,emMinGapPct,emMinPremarketVol,emMinRvol,emPoleBars,emMinPolePct,emFlagBars,emMaxFlagRetrace,emEntryBufCents,emStopBufCents," +
+            "revLookback,revRangePct,revPivot,revSwings,revMaxBarsAfterLow,revMinGreenBody,revMinLowerWick,revEntryBufPct,revStopBufPct,revMinBullRunPct,revTakeProfitPct," +
             "fillBars,entryBuf,tpR," +
             "trainFilled,trainAvgR,trainPF,trainDDPct,trainTotalPnl,trainWinRate," +
             "testFilled,testAvgR,testPF,testDDPct,testTotalPnl,testWinRate");
@@ -459,6 +541,7 @@ public sealed class OptimizeCommand
             var oliver = r.OliverScanner;
             var cam = r.CameronScanner;
             var em = r.EmmanuelScanner;
+            var rev = r.ReversalUpScanner;
 
             sb.Append(r.TrialIndex).Append(',')
               .Append(r.Strategy).Append(',')
@@ -494,6 +577,18 @@ public sealed class OptimizeCommand
               .Append(em?.MaxFlagRetracePct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
               .Append(em?.EntryBufferCents.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
               .Append(em?.StopBufferCents.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+
+              .Append(rev?.SidewaysLookbackBars.ToString() ?? "").Append(',')
+              .Append(rev?.MaxSidewaysRangePct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(rev?.PivotLookbackBars.ToString() ?? "").Append(',')
+              .Append(rev?.MinSwingCount.ToString() ?? "").Append(',')
+              .Append(rev?.MaxBarsAfterSwingLow.ToString() ?? "").Append(',')
+              .Append(rev?.MinGreenBodyToMedian.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(rev?.MinLowerWickPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(rev?.EntryBufferPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(rev?.StopBufferPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(rev?.MinBullRunPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(rev?.TakeProfitBullRunPct.ToString(CultureInfo.InvariantCulture) ?? "").Append(',')
 
               .Append(r.Backtest.MaxBarsToFillEntry).Append(',')
               .Append(r.Backtest.EntryLimitBufferPct.ToString(CultureInfo.InvariantCulture)).Append(',')
@@ -531,8 +626,7 @@ public sealed class OptimizeCommand
             dict[key] = val;
         }
 
-        if (!dict.TryGetValue("symbols", out var symCsv) || string.IsNullOrWhiteSpace(symCsv))
-            throw new ArgumentException("Optimize requires --symbols (comma-separated). Example: --symbols SOXL,QBTS,PATH");
+        dict.TryGetValue("symbols", out var symCsv);
 
         if (!dict.TryGetValue("trainFrom", out var trainFromStr) || !DateOnly.TryParse(trainFromStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out var trainFrom))
             throw new ArgumentException("Optimize requires --trainFrom YYYY-MM-DD");
@@ -556,12 +650,16 @@ public sealed class OptimizeCommand
         var strategy = ParseStrategy(dict.TryGetValue("strategy", out var st) ? st : null);
         var sessionMode = ParseSessionMode(dict.TryGetValue("session", out var sm) ? sm : null);
         var sessionHours = _cfg.GetSection("MarketSessions").Get<MarketSessionHours>() ?? new MarketSessionHours();
+        var execDirection = TradeDirectionParser.Parse(_cfg.GetValue<string>("Execution:TradeDirection"));
+        var tradeDirection = TradeDirectionParser.Parse(_cfg.GetValue<string>("Optimize:TradeDirection"), execDirection);
 
         // Backtest execution defaults
         var flattenStr = _cfg.GetValue<string>("Optimize:FlattenTimeEt") ?? "15:50";
         var flatten = TimeOnly.ParseExact(flattenStr, "HH:mm", CultureInfo.InvariantCulture);
 
-        var symbols = symCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var symbols = string.IsNullOrWhiteSpace(symCsv)
+            ? new List<string>()
+            : symCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         // Parameter ranges: allow override from appsettings.json, but provide good defaults.
         var p = new OptimizeOptions
@@ -580,6 +678,7 @@ public sealed class OptimizeCommand
             Strategy = strategy,
             SessionMode = sessionMode,
             SessionHours = sessionHours,
+            TradeDirection = tradeDirection,
 
             FlattenTimeEt = flatten,
             SameBarRule = SameBarFillRule.ConservativeStopFirst,
@@ -592,6 +691,8 @@ public sealed class OptimizeCommand
             WeightMaxDrawdownPct = _cfg.GetValue("Optimize:Weights:MaxDrawdownPct", 50m),
             WeightNoFillPct = _cfg.GetValue("Optimize:Weights:NoFillPct", 5m),
             WeightWinRate = _cfg.GetValue("Optimize:Weights:WinRate", 100m),
+            WeightTotalPnl = _cfg.GetValue("Optimize:Weights:TotalPnl", 1m),
+            WeightAvgPnl = _cfg.GetValue("Optimize:Weights:AvgPnl", 50m),
             MinWinRate = _cfg.GetValue("Optimize:MinWinRate", 0.5m),
 
             TrainWeight = _cfg.GetValue("Optimize:TrainWeight", 0.6m),
@@ -731,6 +832,30 @@ public sealed class OptimizeCommand
             _cfg.GetValue<string>("Optimize:EmmanuelFixed:PremarketEndEt") ?? "09:00",
             CultureInfo.InvariantCulture);
 
+        // ReversalUp ranges
+        p.RevSidewaysLookbackMin = _cfg.GetValue("Optimize:ReversalUpRanges:SidewaysLookbackMin", 30);
+        p.RevSidewaysLookbackMax = _cfg.GetValue("Optimize:ReversalUpRanges:SidewaysLookbackMax", 80);
+        p.RevMaxSidewaysRangePctMin = _cfg.GetValue("Optimize:ReversalUpRanges:MaxSidewaysRangePctMin", 0.02m);
+        p.RevMaxSidewaysRangePctMax = _cfg.GetValue("Optimize:ReversalUpRanges:MaxSidewaysRangePctMax", 0.07m);
+        p.RevPivotLookbackMin = _cfg.GetValue("Optimize:ReversalUpRanges:PivotLookbackMin", 2);
+        p.RevPivotLookbackMax = _cfg.GetValue("Optimize:ReversalUpRanges:PivotLookbackMax", 5);
+        p.RevMinSwingCountMin = _cfg.GetValue("Optimize:ReversalUpRanges:MinSwingCountMin", 3);
+        p.RevMinSwingCountMax = _cfg.GetValue("Optimize:ReversalUpRanges:MinSwingCountMax", 6);
+        p.RevMaxBarsAfterLowMin = _cfg.GetValue("Optimize:ReversalUpRanges:MaxBarsAfterLowMin", 1);
+        p.RevMaxBarsAfterLowMax = _cfg.GetValue("Optimize:ReversalUpRanges:MaxBarsAfterLowMax", 5);
+        p.RevMinGreenBodyToMedianMin = _cfg.GetValue("Optimize:ReversalUpRanges:MinGreenBodyToMedianMin", 1.1m);
+        p.RevMinGreenBodyToMedianMax = _cfg.GetValue("Optimize:ReversalUpRanges:MinGreenBodyToMedianMax", 2.0m);
+        p.RevMinLowerWickPctMin = _cfg.GetValue("Optimize:ReversalUpRanges:MinLowerWickPctMin", 0.2m);
+        p.RevMinLowerWickPctMax = _cfg.GetValue("Optimize:ReversalUpRanges:MinLowerWickPctMax", 0.5m);
+        p.RevEntryBufferPctMin = _cfg.GetValue("Optimize:ReversalUpRanges:EntryBufferPctMin", 0.0m);
+        p.RevEntryBufferPctMax = _cfg.GetValue("Optimize:ReversalUpRanges:EntryBufferPctMax", 0.002m);
+        p.RevStopBufferPctMin = _cfg.GetValue("Optimize:ReversalUpRanges:StopBufferPctMin", 0.0m);
+        p.RevStopBufferPctMax = _cfg.GetValue("Optimize:ReversalUpRanges:StopBufferPctMax", 0.003m);
+        p.RevMinBullRunPctMin = _cfg.GetValue("Optimize:ReversalUpRanges:MinBullRunPctMin", 0.01m);
+        p.RevMinBullRunPctMax = _cfg.GetValue("Optimize:ReversalUpRanges:MinBullRunPctMax", 0.06m);
+        p.RevTakeProfitBullRunPctMin = _cfg.GetValue("Optimize:ReversalUpRanges:TakeProfitBullRunPctMin", 0.5m);
+        p.RevTakeProfitBullRunPctMax = _cfg.GetValue("Optimize:ReversalUpRanges:TakeProfitBullRunPctMax", 0.8m);
+
         return p;
 
         static IReadOnlyList<decimal?> ParseTpValues(string csv)
@@ -782,6 +907,7 @@ public sealed record OptimizeOptions
     public TradingStrategy Strategy { get; init; } = TradingStrategy.Oliver;
     public MarketSessionMode SessionMode { get; init; } = MarketSessionMode.Auto;
     public MarketSessionHours SessionHours { get; init; } = new();
+    public TradeDirectionMode TradeDirection { get; init; } = TradeDirectionMode.Both;
 
     public int Trials { get; init; } = 500;
     public int Seed { get; init; } = 12345;
@@ -800,6 +926,8 @@ public sealed record OptimizeOptions
     public decimal WeightMaxDrawdownPct { get; init; } = 50m;
     public decimal WeightNoFillPct { get; init; } = 5m;
     public decimal WeightWinRate { get; init; } = 100m;
+    public decimal WeightTotalPnl { get; init; } = 1m;
+    public decimal WeightAvgPnl { get; init; } = 50m;
     public decimal MinWinRate { get; init; } = 0.5m;
     public decimal TrainWeight { get; init; } = 0.6m;
     public decimal TestWeight { get; init; } = 0.4m;
@@ -927,6 +1055,30 @@ public sealed record OptimizeOptions
     public bool EmRequireLowerFlagVolume { get; set; }
     public TimeSpan EmPremarketStartEt { get; set; }
     public TimeSpan EmPremarketEndEt { get; set; }
+
+    // ReversalUp ranges
+    public int RevSidewaysLookbackMin { get; set; }
+    public int RevSidewaysLookbackMax { get; set; }
+    public decimal RevMaxSidewaysRangePctMin { get; set; }
+    public decimal RevMaxSidewaysRangePctMax { get; set; }
+    public int RevPivotLookbackMin { get; set; }
+    public int RevPivotLookbackMax { get; set; }
+    public int RevMinSwingCountMin { get; set; }
+    public int RevMinSwingCountMax { get; set; }
+    public int RevMaxBarsAfterLowMin { get; set; }
+    public int RevMaxBarsAfterLowMax { get; set; }
+    public decimal RevMinGreenBodyToMedianMin { get; set; }
+    public decimal RevMinGreenBodyToMedianMax { get; set; }
+    public decimal RevMinLowerWickPctMin { get; set; }
+    public decimal RevMinLowerWickPctMax { get; set; }
+    public decimal RevEntryBufferPctMin { get; set; }
+    public decimal RevEntryBufferPctMax { get; set; }
+    public decimal RevStopBufferPctMin { get; set; }
+    public decimal RevStopBufferPctMax { get; set; }
+    public decimal RevMinBullRunPctMin { get; set; }
+    public decimal RevMinBullRunPctMax { get; set; }
+    public decimal RevTakeProfitBullRunPctMin { get; set; }
+    public decimal RevTakeProfitBullRunPctMax { get; set; }
 }
 
 public sealed record TrialSettings(
@@ -934,6 +1086,7 @@ public sealed record TrialSettings(
     TraidrScannerOptions? OliverScanner,
     CameronRossScannerOptions? CameronScanner,
     EmmanuelScannerOptions? EmmanuelScanner,
+    ReversalUpScannerOptions? ReversalUpScanner,
     TrialBacktestSettings Backtest);
 
 public sealed record TrialBacktestSettings
@@ -965,6 +1118,7 @@ public sealed record OptimizeTrialResult
     public TraidrScannerOptions? OliverScanner { get; init; }
     public CameronRossScannerOptions? CameronScanner { get; init; }
     public EmmanuelScannerOptions? EmmanuelScanner { get; init; }
+    public ReversalUpScannerOptions? ReversalUpScanner { get; init; }
     public required TrialBacktestSettings Backtest { get; init; }
     public required OptimizeMetrics Train { get; init; }
     public required OptimizeMetrics Test { get; init; }

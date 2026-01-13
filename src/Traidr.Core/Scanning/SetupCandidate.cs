@@ -12,6 +12,7 @@ public sealed record SetupCandidate(
 
     decimal EntryPrice,
     decimal StopPrice,
+    decimal? TakeProfitPrice,
 
     decimal ConsolidationHigh,
     decimal ConsolidationLow,

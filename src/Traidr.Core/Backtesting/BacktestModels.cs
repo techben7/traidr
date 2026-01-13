@@ -40,6 +40,8 @@ public sealed record BacktestOptions
     public decimal SlippagePct { get; init; } = 0.0005m;
     public decimal CommissionPerTrade { get; init; } = 0m;
 
+    public TradeDirectionMode TradeDirection { get; init; } = TradeDirectionMode.Both;
+
     // Optional: set a take-profit at R multiple of initial risk.
     // Example: 2.0 => TP is 2R away from entry.
     public decimal? TakeProfitR { get; init; } = null;

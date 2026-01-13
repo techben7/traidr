@@ -53,6 +53,7 @@ public sealed class Runner
             _cfg.GetValue<string>("Execution:Strategy")
             ?? _cfg.GetValue<string>("Strategy:Default"));
         var sessionMode = ParseSessionMode(_cfg.GetValue<string>("Execution:SessionMode"));
+        var tradeDirection = TradeDirectionParser.Parse(_cfg.GetValue<string>("Execution:TradeDirection"));
         var sessionHours = _cfg.GetSection("MarketSessions").Get<MarketSessionHours>() ?? new MarketSessionHours();
         var extendedLookbackHours = _cfg.GetValue("Execution:ExtendedLookbackHours", 72);
         var marketTz = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
@@ -99,7 +100,7 @@ public sealed class Runner
 
         // 4) Scan for setups
         var scanner = _scannerFactory.Create(strategy);
-        var candidates = scanner.Scan(bars);
+        var candidates = tradeDirection.Filter(scanner.Scan(bars));
         if (candidates.Count == 0)
         {
             _log.LogPink("No {Strategy} setups found this run.", strategy);
@@ -133,7 +134,7 @@ public sealed class Runner
 
             var entry = s.EntryPrice ?? c.EntryPrice;
             var stop = s.StopPrice ?? c.StopPrice;
-            decimal? takeProfit = s.TakeProfitPrice;
+            decimal? takeProfit = s.TakeProfitPrice ?? c.TakeProfitPrice;
             if (strategy == TradingStrategy.Emmanuel && !takeProfit.HasValue)
             {
                 var tpR = _cfg.GetValue("Execution:Emmanuel:TakeProfitR", 2.0m);
