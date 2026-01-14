@@ -9,6 +9,7 @@ public sealed class CameronRossScanner : ISetupScanner
 {
     private readonly IndicatorCalculator _indicators;
     private readonly CameronRossScannerOptions _opt;
+    private readonly RetestOptions _retest;
     private readonly IMarketMetadataProvider _meta;
     private readonly IMarketDataClient? _marketData;
     private readonly ILogger _log;
@@ -17,6 +18,7 @@ public sealed class CameronRossScanner : ISetupScanner
     public CameronRossScanner(
         IndicatorCalculator indicators,
         CameronRossScannerOptions opt,
+        RetestOptions retest,
         IMarketMetadataProvider meta,
         IMarketDataClient? marketData = null,
         ILogger? log = null,
@@ -24,6 +26,7 @@ public sealed class CameronRossScanner : ISetupScanner
     {
         _indicators = indicators;
         _opt = opt;
+        _retest = retest;
         _meta = meta;
         _marketData = marketData;
         _log = log ?? NullLogger.Instance;
@@ -160,6 +163,12 @@ public sealed class CameronRossScanner : ISetupScanner
             if (_opt.RequireRoundBreak && !IsNearRoundLevel(entry))
             {
                 LogSkip(symbol, "not near round/half-dollar level");
+                continue;
+            }
+
+            if (_retest.IncludeRetest && !RetestHelper.HasRetestConfirmation(bars, entry, direction, _retest))
+            {
+                LogSkip(symbol, "retest not confirmed");
                 continue;
             }
 

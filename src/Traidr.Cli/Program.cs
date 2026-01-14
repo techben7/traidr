@@ -36,6 +36,7 @@ services.AddSingleton(configuration.GetSection("TraidrScanner").Get<TraidrScanne
 services.AddSingleton(configuration.GetSection("CameronRossScanner").Get<CameronRossScannerOptions>() ?? new CameronRossScannerOptions());
 services.AddSingleton(configuration.GetSection("EmmanuelScanner").Get<EmmanuelScannerOptions>() ?? new EmmanuelScannerOptions());
 services.AddSingleton(configuration.GetSection("ReversalUpScanner").Get<ReversalUpScannerOptions>() ?? new ReversalUpScannerOptions());
+services.AddSingleton(configuration.GetSection("Retest").Get<RetestOptions>() ?? new RetestOptions());
 services.AddSingleton(configuration.GetSection("AutoUniverse").Get<AutoUniverseOptions>() ?? new AutoUniverseOptions());
 services.AddSingleton(configuration.GetSection("Llm").Get<LlmProxyOptions>() ?? new LlmProxyOptions());
 services.AddSingleton(configuration.GetSection("Risk").Get<RiskManagerOptions>() ?? new RiskManagerOptions());

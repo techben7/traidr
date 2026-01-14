@@ -42,7 +42,7 @@ public sealed class FinancialModelingPrepClient
 
         var raw = await resp.Content.ReadAsStringAsync(ct);
         var rows = JsonSerializer.Deserialize<List<FmpScreenerRow>>(raw, Json);
-        return rows ?? Array.Empty<FmpScreenerRow>();
+        return rows != null ? rows : Array.Empty<FmpScreenerRow>();
     }
 
     public async Task<long?> GetFloatSharesAsync(string symbol, CancellationToken ct = default)

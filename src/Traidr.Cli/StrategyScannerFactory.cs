@@ -22,6 +22,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
     private readonly CameronRossScannerOptions _cameronDefaults;
     private readonly EmmanuelScannerOptions _emmanuelDefaults;
     private readonly ReversalUpScannerOptions _reversalUpDefaults;
+    private readonly RetestOptions _retest;
     private readonly IMarketMetadataProvider _meta;
     private readonly IMarketDataClient _marketData;
     private readonly ILoggerFactory _logs;
@@ -32,6 +33,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
         CameronRossScannerOptions cameronDefaults,
         EmmanuelScannerOptions emmanuelDefaults,
         ReversalUpScannerOptions reversalUpDefaults,
+        RetestOptions retest,
         IMarketMetadataProvider meta,
         IMarketDataClient marketData,
         ILoggerFactory logs)
@@ -41,6 +43,7 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
         _cameronDefaults = cameronDefaults;
         _emmanuelDefaults = emmanuelDefaults;
         _reversalUpDefaults = reversalUpDefaults;
+        _retest = retest;
         _meta = meta;
         _marketData = marketData;
         _logs = logs;
@@ -58,21 +61,25 @@ public sealed class StrategyScannerFactory : IStrategyScannerFactory
             TradingStrategy.CameronRoss => new CameronRossScanner(
                 _indicators,
                 cameron ?? _cameronDefaults,
+                _retest,
                 _meta,
                 _marketData,
                 _logs.CreateLogger<CameronRossScanner>()),
             TradingStrategy.Emmanuel => new EmmanuelScanner(
                 _indicators,
                 emmanuel ?? _emmanuelDefaults,
+                _retest,
                 _meta,
                 _logs.CreateLogger<EmmanuelScanner>()),
             TradingStrategy.ReversalUp => new ReversalUpScanner(
                 _indicators,
                 reversalUp ?? _reversalUpDefaults,
+                _retest,
                 _logs.CreateLogger<ReversalUpScanner>()),
             _ => new TraidrScanner(
                 _indicators,
                 oliver ?? _oliverDefaults,
+                _retest,
                 _logs.CreateLogger<TraidrScanner>())
         };
     }

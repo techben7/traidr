@@ -49,7 +49,8 @@ public sealed class WebullPollingOrderExecutor : IOrderExecutor
         _log($"WEBULL ENTRY: {intent.Symbol} {entrySide} qty={intent.Quantity} limit={intent.EntryPrice}");
         var placedEntry = await _webull.PlaceStockOrderAsync(_opt.AccountId, entryOrder, ct);
 
-        var fill = await WaitForFillAsync(_opt.AccountId, placedEntry.ClientOrderId, ct);
+        var fillTimeout = intent.FillTimeoutOverride ?? _execOpt.FillTimeout;
+        var fill = await WaitForFillAsync(_opt.AccountId, placedEntry.ClientOrderId, fillTimeout, ct);
 
         if (fill is null)
         {
@@ -178,9 +179,13 @@ public sealed class WebullPollingOrderExecutor : IOrderExecutor
         }
     }
 
-    private async Task<(string FilledQty, string FilledPrice)?> WaitForFillAsync(string accountId, string clientOrderId, CancellationToken ct)
+    private async Task<(string FilledQty, string FilledPrice)?> WaitForFillAsync(
+        string accountId,
+        string clientOrderId,
+        TimeSpan fillTimeout,
+        CancellationToken ct)
     {
-        var deadline = DateTimeOffset.UtcNow + _execOpt.FillTimeout;
+        var deadline = DateTimeOffset.UtcNow + fillTimeout;
 
         while (DateTimeOffset.UtcNow < deadline)
         {

@@ -186,3 +186,20 @@ dotnet run --project src/Traidr.Cli -- optimize --strategy ReversalUp \
     dotnet run --project src/Traidr.Cli -- backtest --strategy ReversalUp \
       --symbols SOXL,QBTS,TSLL,CRWV,APLD,SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
       --from 2025-06-01 --to 2026-01-08
+
+
+------
+
+
+dotnet run --project src/Traidr.Cli -- optimize --session Regular --strategy Oliver \
+  --symbols SOXL,QBTS,TSLL,CRWV,APLD,SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --trainFrom 2025-01-01 --trainTo 2025-06-01 \
+  --testFrom 2025-06-02 --testTo 2026-01-13 \
+  --trials 300 \
+  --out out_opt
+
+------------
+
+  dotnet run --project src/Traidr.Cli -- backtest --strategy CameronRoss \
+      --symbols DKNG,BROS \
+      --from 2025-06-01 --to 2026-01-12

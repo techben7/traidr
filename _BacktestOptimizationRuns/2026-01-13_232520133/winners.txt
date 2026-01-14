@@ -1,0 +1,232 @@
+dotnet run --project src/Traidr.Cli -- optimize --session Regular --strategy Oliver \
+  --symbols SOXL,QBTS,TSLL,CRWV,APLD,SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+  --trainFrom 2025-01-01 --trainTo 2025-06-01 \
+  --testFrom 2025-06-02 --testTo 2026-01-13 \
+  --trials 300 \
+  --out out_opt
+
+
+{
+    "TrialIndex": 250,
+    "Strategy": 0,
+    "OliverScanner": {
+      "ConsolidationLookbackBars": 18,
+      "MaxConsolidationRangePct": 0.0062693534871886210,
+      "MinBodyToMedianBody": 1.6626358751499264,
+      "MinVolumeToAvgVolume": 2.9851338492171536,
+      "BreakoutBufferPct": 0.0003122648123243190,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.0007551993428520860
+    },
+    "CameronScanner": null,
+    "EmmanuelScanner": null,
+    "ReversalUpScanner": null,
+    "Backtest": {
+      "MaxBarsToFillEntry": 18,
+      "EntryLimitBufferPct": 0.0009808228623498345,
+      "TakeProfitR": null
+    },
+    "Train": {
+      "Trades": 9,
+      "FilledTrades": 9,
+      "Wins": 3,
+      "Losses": 6,
+      "WinRate": 0.3333333333333333333333333333,
+      "TotalPnl": 192.60650394493206180965314375,
+      "AvgPnl": 21.400722660548006867739238194,
+      "AvgR": 0.2679106228816805490224031781,
+      "MaxDrawdown": 272.00837738842176191513678375,
+      "MaxDrawdownPct": 0.0108803350955368704766054714,
+      "ProfitFactor": 1.4907036441444739097164317624
+    },
+    "Test": {
+      "Trades": 29,
+      "FilledTrades": 27,
+      "Wins": 10,
+      "Losses": 17,
+      "WinRate": 0.3703703703703703703703703704,
+      "TotalPnl": 361.04004513604023704064063875,
+      "AvgPnl": 13.371853523557045816320023657,
+      "AvgR": 0.1265216817429292902147120039,
+      "MaxDrawdown": 405.36521622281889500913479750,
+      "MaxDrawdownPct": 0.0162146086489127558003653919,
+      "ProfitFactor": 1.4527840662937228008040796848
+    },
+    "TrainScore": 1303.7967189471683556721894152,
+    "TestScore": 1055.6571721324701505444114113,
+    "FinalScore": 1204.5409002212890736210782136
+  },
+
+
+      dotnet run --project src/Traidr.Cli -- backtest --session Regular --strategy Oliver \
+        --symbols SOXL,QBTS,TSLL,CRWV,APLD,SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+        --from 2025-01-01 --to 2025-06-01
+
+      dotnet run --project src/Traidr.Cli -- backtest --session Regular --strategy Oliver \
+        --symbols SOXL,QBTS,TSLL,CRWV,APLD,SOFI,RIVN,PLTR,DKNG,AFRM,MARA,RIOT,LCID,U,PENN,HOOD,OPEN,CLOV,RKLB,PATH,RUN,BROS,IONQ,WOLF,TLRY \
+        --from 2025-06-02 --to 2026-01-13
+
+          GREAT
+          [INFO] [00:09:34.030] Backtest complete. Trades=12 Wins=4 Losses=7 NoFills=1 TotalPnL=188.94168121202564092289533375
+          [INFO] [00:09:34.030] Outputs: _BacktestResults/2026-01-14_000933985/trades.csv | _BacktestResults/2026-01-14_000933985/summary.json
+
+
+      dotnet run --project src/Traidr.Cli -- backtest --session Regular --strategy Oliver \
+        --symbols HAS,OMC,ZM,KEY,KIM,CARR,SRE,DXCM,OKTA,CMCSA,GRAB,CHD,NU,ORI,GEHC \
+        --from 2025-06-02 --to 2026-01-13
+
+          OUCH
+          [INFO] [00:14:41.589] Backtest complete. Trades=240 Wins=60 Losses=165 NoFills=15 TotalPnL=-4582.6462505502295912825511486
+          [INFO] [00:14:41.589] Outputs: _BacktestResults/2026-01-14_001441538/trades.csv | _BacktestResults/2026-01-14_001441538/summary.json
+
+
+      dotnet run --project src/Traidr.Cli -- backtest --session Regular --strategy Oliver \
+        --symbols ASH,ASAN,SMPL,HP,CPRI,UGI,AIR,INTA,MMS,PTON,HQY,SMTC,JPC,NFG,DXC \
+        --from 2025-06-02 --to 2026-01-13
+
+-------------
+
+{
+    "TrialIndex": 450,
+    "Strategy": 0,
+    "OliverScanner": {
+      "ConsolidationLookbackBars": 19,
+      "MaxConsolidationRangePct": 0.0043203853207269560,
+      "MinBodyToMedianBody": 2.3884983343018668,
+      "MinVolumeToAvgVolume": 2.7191239193170904,
+      "BreakoutBufferPct": 0.0003560176558587780,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.0009834644184370820
+    },
+    "CameronScanner": null,
+    "EmmanuelScanner": null,
+    "ReversalUpScanner": null,
+    "Backtest": {
+      "MaxBarsToFillEntry": 2,
+      "EntryLimitBufferPct": 0.0009596277198100590,
+      "TakeProfitR": 1.5
+    },
+    "Train": {
+      "Trades": 2,
+      "FilledTrades": 2,
+      "Wins": 1,
+      "Losses": 1,
+      "WinRate": 0.5,
+      "TotalPnl": 98.31343058415708079602078500,
+      "AvgPnl": 49.15671529207854039801039250,
+      "AvgR": 0.4598225478046340884924869817,
+      "MaxDrawdown": 11.56334774415124039391284500,
+      "MaxDrawdownPct": 0.0004625339097660496157565138,
+      "ProfitFactor": 9.502159820791013547124401732
+    },
+    "Test": {
+      "Trades": 5,
+      "FilledTrades": 5,
+      "Wins": 3,
+      "Losses": 2,
+      "WinRate": 0.6,
+      "TotalPnl": 197.31229226779283999953355750,
+      "AvgPnl": 39.46245845355856799990671150,
+      "AvgR": 0.4739109465505818286121386093,
+      "MaxDrawdown": 23.62041819728919796326631500,
+      "MaxDrawdownPct": 0.0009448167278915679185306526,
+      "ProfitFactor": 7.3507073906107036333055723361
+    },
+    "TrainScore": 2697.1299214809693425362452998,
+    "TestScore": 2291.2861426704918807932121842,
+    "FinalScore": 1534.7924099567783578390320536
+  },
+
+
+-------
+
+
+{
+    "TrialIndex": 481,
+    "Strategy": 0,
+    "OliverScanner": {
+      "ConsolidationLookbackBars": 22,
+      "MaxConsolidationRangePct": 0.0176993982394688690,
+      "MinBodyToMedianBody": 2.9267773450942602,
+      "MinVolumeToAvgVolume": 2.4473724505619024,
+      "BreakoutBufferPct": 0.0008285223673230610,
+      "RequireNearEma20": false,
+      "MaxDistanceFromEma20Pct": 0.015,
+      "RequirePriceAboveEma20": true,
+      "RequirePriceAboveEma200": false,
+      "RequireTrendEma20OverEma200": true,
+      "RequirePriceAboveVwap": true,
+      "RequireEma20NearEma200": false,
+      "MaxEmaDistancePct": 0.015,
+      "RequireAtrAvailable": false,
+      "MinAtrPct": 0.0005,
+      "MaxAtrPct": 0.050,
+      "MinCloseInRangeForLong": 0.70,
+      "MaxCloseInRangeForShort": 0.30,
+      "StopBufferPct": 0.00002727803263220840
+    },
+    "CameronScanner": null,
+    "EmmanuelScanner": null,
+    "ReversalUpScanner": null,
+    "Backtest": {
+      "MaxBarsToFillEntry": 16,
+      "EntryLimitBufferPct": 0.0003842145357673125,
+      "TakeProfitR": null
+    },
+    "Train": {
+      "Trades": 16,
+      "FilledTrades": 15,
+      "Wins": 5,
+      "Losses": 10,
+      "WinRate": 0.3333333333333333333333333333,
+      "TotalPnl": 27.21197484562584154673103350,
+      "AvgPnl": 1.8141316563750561031154022333,
+      "AvgR": 0.0178401590762729227561322527,
+      "MaxDrawdown": 410.69849985832295088203660875,
+      "MaxDrawdownPct": 0.0164279399943329180352814644,
+      "ProfitFactor": 1.0424070746397163089135003454
+    },
+    "Test": {
+      "Trades": 31,
+      "FilledTrades": 30,
+      "Wins": 9,
+      "Losses": 21,
+      "WinRate": 0.3,
+      "TotalPnl": 77.65893625161566871758720600,
+      "AvgPnl": 2.5886312083871889572529068667,
+      "AvgR": 0.0388738033706686498002810164,
+      "MaxDrawdown": 741.12474883926525287749373150,
+      "MaxDrawdownPct": 0.0296449899535706101150997493,
+      "ProfitFactor": 1.0739428403521570287748359267
+    },
+    "TrainScore": 128.99274731868645616548530066,
+    "TestScore": 220.07376559130437618096370020,
+    "FinalScore": 165.42515462773362417167666048
+  },
+
+  ------
+

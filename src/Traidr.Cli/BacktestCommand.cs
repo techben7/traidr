@@ -109,11 +109,13 @@ public sealed class BacktestCommand
                 : (dict.TryGetValue("direction", out var tdShort) ? tdShort : null);
         var tradeDirection = TradeDirectionParser.Parse(argDirection ?? backtestDirection, execDirection);
 
-        var maxBarsToFill = dict.TryGetValue("maxFillBars", out var mb) && int.TryParse(mb, out var n) ? Math.Max(1, n) : 6;
+        var maxBarsToFill = dict.TryGetValue("maxFillBars", out var mb) && int.TryParse(mb, out var n)
+            ? Math.Max(1, n)
+            : _cfg.GetValue("Backtest:MaxBarsToFillEntry", 6);
 
         var entryBufPct = dict.TryGetValue("entryLimitBufferPct", out var eb) && decimal.TryParse(eb, NumberStyles.Number, CultureInfo.InvariantCulture, out var ebd)
             ? Math.Max(0m, ebd)
-            : 0m;
+            : _cfg.GetValue("Backtest:EntryLimitBufferPct", 0m);
 
         var flatten = new TimeOnly(15, 50);
         if (dict.TryGetValue("flatten", out var fl) && TimeOnly.TryParseExact(fl, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var t))
@@ -137,6 +139,8 @@ public sealed class BacktestCommand
         decimal? tpR = null;
         if (dict.TryGetValue("tpR", out var tpr) && decimal.TryParse(tpr, NumberStyles.Number, CultureInfo.InvariantCulture, out var tr))
             tpR = tr;
+        else
+            tpR = ParseNullableDecimal(_cfg.GetValue<string>("Backtest:TakeProfitR"));
 
         var symbols = string.IsNullOrWhiteSpace(symCsv)
             ? new List<string>()
@@ -159,6 +163,15 @@ public sealed class BacktestCommand
             TradeDirection = tradeDirection,
             TakeProfitR = tpR
         }, strategy);
+    }
+
+    private static decimal? ParseNullableDecimal(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        if (value.Equals("null", StringComparison.OrdinalIgnoreCase) || value.Equals("none", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
     }
 
     private TradingStrategy ParseStrategy(string? value)

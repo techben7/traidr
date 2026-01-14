@@ -9,12 +9,14 @@ public sealed class ReversalUpScanner : ISetupScanner
 {
     private readonly IndicatorCalculator _indicators;
     private readonly ReversalUpScannerOptions _opt;
+    private readonly RetestOptions _retest;
     private readonly ILogger _log;
 
-    public ReversalUpScanner(IndicatorCalculator indicators, ReversalUpScannerOptions opt, ILogger? log = null)
+    public ReversalUpScanner(IndicatorCalculator indicators, ReversalUpScannerOptions opt, RetestOptions retest, ILogger? log = null)
     {
         _indicators = indicators;
         _opt = opt;
+        _retest = retest;
         _log = log ?? NullLogger.Instance;
     }
 
@@ -115,10 +117,47 @@ public sealed class ReversalUpScanner : ISetupScanner
                 continue;
             }
 
-            var signal = window[^1];
+            var confirm = window[^1];
+            var signal = confirm;
+            if (_retest.IncludeRetest)
+            {
+                var confirmIndex = window.Count - 1;
+                var retestStart = Math.Max(1, confirmIndex - _retest.RetestMaxBars);
+                var found = false;
+
+                for (var retestIndex = confirmIndex - 1; retestIndex >= retestStart && !found; retestIndex--)
+                {
+                    var retest = window[retestIndex];
+                    var breakoutStart = Math.Max(1, retestIndex - _retest.RetestMaxBars);
+
+                    for (var breakoutIndex = retestIndex - 1; breakoutIndex >= breakoutStart; breakoutIndex--)
+                    {
+                        var breakout = window[breakoutIndex];
+                        var breakoutLevel = breakout.Close;
+                        if (breakoutLevel <= 0m)
+                            continue;
+
+                        if (retest.Low > breakoutLevel * (1m + _retest.RetestTolerancePct))
+                            continue;
+                        if (confirm.Close < breakoutLevel * (1m + _retest.RetestConfirmMinClosePct))
+                            continue;
+
+                        signal = breakout;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    LogSkip(symbol, "R12 retest not confirmed");
+                    continue;
+                }
+            }
+
             if (signal.Close <= signal.Open)
             {
-                LogSkip(symbol, "R12 signal bar not green");
+                LogSkip(symbol, "R13 signal bar not green");
                 continue;
             }
 
@@ -126,7 +165,7 @@ public sealed class ReversalUpScanner : ISetupScanner
             var medianBody = bodies.Count == 0 ? 0m : bodies[bodies.Count / 2];
             if (medianBody <= 0m)
             {
-                LogSkip(symbol, "R13 median body <= 0");
+                LogSkip(symbol, "R14 median body <= 0");
                 continue;
             }
 
@@ -134,14 +173,14 @@ public sealed class ReversalUpScanner : ISetupScanner
             var bodyToMedian = body / medianBody;
             if (bodyToMedian < _opt.MinGreenBodyToMedian)
             {
-                LogSkip(symbol, $"R14 body/median too small ({bodyToMedian:F2} < {_opt.MinGreenBodyToMedian:F2})");
+                LogSkip(symbol, $"R15 body/median too small ({bodyToMedian:F2} < {_opt.MinGreenBodyToMedian:F2})");
                 continue;
             }
 
             var range = signal.High - signal.Low;
             if (range <= 0m)
             {
-                LogSkip(symbol, "R15 invalid signal range");
+                LogSkip(symbol, "R16 invalid signal range");
                 continue;
             }
 
@@ -149,22 +188,23 @@ public sealed class ReversalUpScanner : ISetupScanner
             var lowerWickPct = lowerWick / range;
             if (lowerWickPct < _opt.MinLowerWickPct)
             {
-                LogSkip(symbol, $"R16 lower wick too small ({lowerWickPct:P2} < {_opt.MinLowerWickPct:P2})");
+                LogSkip(symbol, $"R17 lower wick too small ({lowerWickPct:P2} < {_opt.MinLowerWickPct:P2})");
                 continue;
             }
 
-            var entry = signal.Close * (1m + _opt.EntryBufferPct);
+            var baseEntry = _retest.IncludeRetest ? confirm.Close : signal.Close;
+            var entry = baseEntry * (1m + _opt.EntryBufferPct);
             var stop = lastLow.Price * (1m - _opt.StopBufferPct);
             if (entry <= 0m || stop <= 0m)
             {
-                LogSkip(symbol, "R17 invalid entry/stop");
+                LogSkip(symbol, "R18 invalid entry/stop");
                 continue;
             }
 
             var takeProfit = lastLow.Price + (_opt.TakeProfitBullRunPct * bullRunDist);
             if (takeProfit <= entry)
             {
-                LogSkip(symbol, "R18 take profit below entry");
+                LogSkip(symbol, "R19 take profit below entry");
                 continue;
             }
 
@@ -176,9 +216,10 @@ public sealed class ReversalUpScanner : ISetupScanner
 
             var atrPct = 0m;
             var atr14 = series.Atr14[idx];
-            if (atr14.HasValue && signal.Close > 0m)
-                atrPct = atr14.Value / signal.Close;
+            if (atr14.HasValue && baseEntry > 0m)
+                atrPct = atr14.Value / baseEntry;
 
+            var signalTime = _retest.IncludeRetest ? confirm.TimeUtc : signal.TimeUtc;
             candidates.Add(new SetupCandidate(
                 Symbol: symbol,
                 Direction: BreakoutDirection.Long,
@@ -195,7 +236,7 @@ public sealed class ReversalUpScanner : ISetupScanner
                 Ema200: series.Ema200[idx],
                 Vwap: series.Vwap[idx],
                 Atr14: atr14,
-                ElephantBarTimeUtc: signal.TimeUtc
+                ElephantBarTimeUtc: signalTime
             ));
         }
 

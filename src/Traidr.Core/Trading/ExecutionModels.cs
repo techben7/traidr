@@ -8,7 +8,8 @@ public sealed record TradeIntent(
     int Quantity,
     decimal EntryPrice,
     decimal StopPrice,
-    decimal? TakeProfitPrice);
+    decimal? TakeProfitPrice,
+    TimeSpan? FillTimeoutOverride = null);
 
 public interface IOrderExecutor
 {
@@ -28,7 +29,7 @@ public sealed class PaperOrderExecutor : IOrderExecutor
 
     public Task ExecuteAsync(TradeIntent intent, CancellationToken ct = default)
     {
-        _log($"PAPER EXECUTE: {intent.Symbol} {intent.Direction} qty={intent.Quantity} entry={intent.EntryPrice} stop={intent.StopPrice} tp={intent.TakeProfitPrice}");
+        _log($"PAPER EXECUTE: {intent.Symbol} {intent.Direction} qty={intent.Quantity} entry={intent.EntryPrice} stop={intent.StopPrice} tp={intent.TakeProfitPrice} fillTimeout={intent.FillTimeoutOverride}");
         _riskState.RecordTradePlaced(intent.Symbol, DateTimeOffset.UtcNow);
         return Task.CompletedTask;
     }

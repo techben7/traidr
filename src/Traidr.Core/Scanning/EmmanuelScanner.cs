@@ -9,6 +9,7 @@ public sealed class EmmanuelScanner : ISetupScanner
 {
     private readonly IndicatorCalculator _indicators;
     private readonly EmmanuelScannerOptions _opt;
+    private readonly RetestOptions _retest;
     private readonly IMarketMetadataProvider _meta;
     private readonly ILogger _log;
     private readonly TimeZoneInfo _marketTz;
@@ -16,12 +17,14 @@ public sealed class EmmanuelScanner : ISetupScanner
     public EmmanuelScanner(
         IndicatorCalculator indicators,
         EmmanuelScannerOptions opt,
+        RetestOptions retest,
         IMarketMetadataProvider meta,
         ILogger? log = null,
         string marketTimeZoneId = "America/New_York")
     {
         _indicators = indicators;
         _opt = opt;
+        _retest = retest;
         _meta = meta;
         _log = log ?? NullLogger.Instance;
         _marketTz = TimeZoneInfo.FindSystemTimeZoneById(marketTimeZoneId);
@@ -190,6 +193,12 @@ public sealed class EmmanuelScanner : ISetupScanner
             if (stop <= 0m)
             {
                 LogSkip(symbol, "invalid stop price");
+                continue;
+            }
+
+            if (_retest.IncludeRetest && !RetestHelper.HasRetestConfirmation(bars, triggerHigh, BreakoutDirection.Long, _retest))
+            {
+                LogSkip(symbol, "retest not confirmed");
                 continue;
             }
 

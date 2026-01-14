@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traidr.Core.Llm;
@@ -56,6 +57,9 @@ public sealed class Runner
         var tradeDirection = TradeDirectionParser.Parse(_cfg.GetValue<string>("Execution:TradeDirection"));
         var sessionHours = _cfg.GetSection("MarketSessions").Get<MarketSessionHours>() ?? new MarketSessionHours();
         var extendedLookbackHours = _cfg.GetValue("Execution:ExtendedLookbackHours", 72);
+        var entryLimitBufferPct = _cfg.GetValue("Execution:EntryLimitBufferPct", 0.0m);
+        var maxFillBars = _cfg.GetValue<int?>("Execution:MaxBarsToFillEntry");
+        var takeProfitR = ParseNullableDecimal(_cfg.GetValue<string>("Execution:TakeProfitR"));
         var marketTz = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
 
         // 1) Universe
@@ -133,17 +137,24 @@ public sealed class Runner
             }
 
             var entry = s.EntryPrice ?? c.EntryPrice;
+            entry = ApplyEntryLimitBuffer(entry, c.Direction, entryLimitBufferPct);
             var stop = s.StopPrice ?? c.StopPrice;
             decimal? takeProfit = s.TakeProfitPrice ?? c.TakeProfitPrice;
-            if (strategy == TradingStrategy.Emmanuel && !takeProfit.HasValue)
+            if (!takeProfit.HasValue)
             {
-                var tpR = _cfg.GetValue("Execution:Emmanuel:TakeProfitR", 2.0m);
-                var riskPerShare = Math.Abs(entry - stop);
-                if (riskPerShare > 0m)
+                var tpR = strategy == TradingStrategy.Emmanuel
+                    ? _cfg.GetValue("Execution:Emmanuel:TakeProfitR", 2.0m)
+                    : (takeProfitR ?? 0m);
+
+                if (tpR > 0m)
                 {
-                    takeProfit = c.Direction == BreakoutDirection.Long
-                        ? entry + (riskPerShare * tpR)
-                        : entry - (riskPerShare * tpR);
+                    var riskPerShare = Math.Abs(entry - stop);
+                    if (riskPerShare > 0m)
+                    {
+                        takeProfit = c.Direction == BreakoutDirection.Long
+                            ? entry + (riskPerShare * tpR)
+                            : entry - (riskPerShare * tpR);
+                    }
                 }
             }
 
@@ -162,10 +173,11 @@ public sealed class Runner
                 Quantity: qty,
                 EntryPrice: entry,
                 StopPrice: stop,
-                TakeProfitPrice: takeProfit);
+                TakeProfitPrice: takeProfit,
+                FillTimeoutOverride: ComputeFillTimeout(maxFillBars, timeframe));
 
             _log.LogGreen("EXECUTE: {Symbol} qty={Qty} estRisk={Risk} tp={Tp}",
-                c.Symbol, qty, decision.EstimatedRiskDollars, s.TakeProfitPrice);
+                c.Symbol, qty, decision.EstimatedRiskDollars, takeProfit);
 
             await _executor.ExecuteAsync(intent, ct);
         }
@@ -202,5 +214,60 @@ public sealed class Runner
             MarketSession.AfterHours => MarketSessionMode.AfterHours,
             _ => null
         };
+    }
+
+    private static decimal ApplyEntryLimitBuffer(decimal entry, BreakoutDirection dir, decimal bufferPct)
+    {
+        if (bufferPct <= 0m)
+            return entry;
+        return dir == BreakoutDirection.Long
+            ? entry * (1m + bufferPct)
+            : entry * (1m - bufferPct);
+    }
+
+    private static TimeSpan? ComputeFillTimeout(int? maxBars, string timeframe)
+    {
+        if (!maxBars.HasValue || maxBars.Value <= 0)
+            return null;
+
+        var minutes = ParseTimeframeMinutes(timeframe);
+        if (minutes <= 0)
+            return null;
+
+        return TimeSpan.FromMinutes(minutes * maxBars.Value);
+    }
+
+    private static int ParseTimeframeMinutes(string? timeframe)
+    {
+        if (string.IsNullOrWhiteSpace(timeframe))
+            return 0;
+
+        var tf = timeframe.Trim();
+        if (tf.EndsWith("Min", StringComparison.OrdinalIgnoreCase))
+        {
+            if (int.TryParse(tf[..^3], out var mins))
+                return mins;
+        }
+        if (tf.EndsWith("Hour", StringComparison.OrdinalIgnoreCase))
+        {
+            if (int.TryParse(tf[..^4], out var hours))
+                return hours * 60;
+        }
+        if (tf.EndsWith("H", StringComparison.OrdinalIgnoreCase))
+        {
+            if (int.TryParse(tf[..^1], out var hours))
+                return hours * 60;
+        }
+
+        return 0;
+    }
+
+    private static decimal? ParseNullableDecimal(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        if (value.Equals("null", StringComparison.OrdinalIgnoreCase) || value.Equals("none", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
     }
 }
